@@ -1,4 +1,5 @@
 import {tiny, defs} from './examples/common.js';
+import {Shape_From_File} from "./examples/obj-file-demo.js";
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
@@ -124,6 +125,8 @@ export class Subway_Surf_Base extends Scene
             box  : new Cube(),
             ball : new Subdivision_Sphere( 4 ),
             square  : new Square(),
+            block: new Shape_From_File("assets/road-block.obj"),
+
         };
 
         this.scout = new Scout();
@@ -134,12 +137,18 @@ export class Subway_Surf_Base extends Scene
         // coefficients that appear in the Phong lighting formulas so that the
         // appearance of particular materials can be tweaked via these numbers.
         const phong = new defs.Phong_Shader();
-        this.materials = { plastic: new Material( phong,
+        this.materials = {
+            plastic: new Material( phong,
                 { ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) } ),
             metal: new Material( phong,
                 { ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } ),
             transparent: new Material(phong,
                 {ambient: .2, diffusivity: .8, specularity: .5, color: color(.9,.9,.9,.3)}),
+            block: new Material(new defs.Textured_Phong(), {
+                color: color(1., 1., 1., 1),
+                ambient: .5, diffusivity: 0.5, specularity: 0.3,
+                texture: new Texture("assets/road-block.jpg")
+            }),
         };
     }
     make_control_panel()
@@ -311,6 +320,9 @@ export class Subway_Surf extends Subway_Surf_Base
 
         this.scout.draw(context, program_state, transform_scout, this.materials.metal.override({color: yellow}), phase);
         this.shapes.square.draw(context, program_state, Mat4.rotation(Math.PI/2, 1,0,0), this.materials.metal);
+
+        this.shapes.block.draw(context, program_state, Mat4.identity().times(Mat4.translation(0, 0, -10)), this.materials.block);
+
 
         // Note that our coordinate system stored in model_transform still has non-uniform scaling
         // due to our scale() call.  This could have undesired effects for subsequent transforms;

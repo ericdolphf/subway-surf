@@ -1,7 +1,7 @@
 *.gif
 *.ico
-*.png
-*.jpg
-*.obj
+#*.png
+#*.jpg
+#*.obj
 *.bat
 *.command

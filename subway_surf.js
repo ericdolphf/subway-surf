@@ -125,7 +125,13 @@ export class Subway_Surf_Base extends Scene
             box  : new Cube(),
             ball : new Subdivision_Sphere( 4 ),
             square  : new Square(),
-            block: new Shape_From_File("assets/road-block.obj"),
+            block: new Shape_From_File("assets/road-block-new.obj"),
+            test_cube: new Shape_From_File("assets/blender-test.obj"),
+            test_ball: new Shape_From_File("assets/test-ball.obj"),
+            test_cone: new Shape_From_File("assets/test-cone.obj"),
+
+
+
 
         };
 
@@ -203,15 +209,10 @@ export class Subway_Surf_Base extends Scene
 
 
 export class Subway_Surf extends Subway_Surf_Base
-{                                                    // **Transforms_Sandbox** is a Scene object that can be added to any display canvas.
-                                                     // This particular scene is broken up into two pieces for easier understanding.
-                                                     // See the other piece, Transforms_Sandbox_Base, if you need to see the setup code.
-                                                     // The piece here exposes only the display() method, which actually places and draws
-                                                     // the shapes.  We isolate that code so it can be experimented with on its own.
-                                                     // This gives you a very small code sandbox for editing a simple scene, and for
-                                                     // experimenting with matrix transformations.
+{
     display( context, program_state )
-    {                                                // display():  Called once per frame of animation.  For each shape that you want to
+    {
+        // display():  Called once per frame of animation.  For each shape that you want to
         // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
         // different matrix value to control where the shape appears.
 
@@ -227,14 +228,6 @@ export class Subway_Surf extends Subway_Surf_Base
 
         // Call the setup code that we left inside the base class:
         super.display( context, program_state );
-
-        /**********************************
-         Start coding down here!!!!
-         **********************************/
-            // From here on down it's just some example shapes drawn for you -- freely
-            // replace them with your own!  Notice the usage of the Mat4 functions
-            // translation(), scale(), and rotation() to generate matrices, and the
-            // function times(), which generates products of matrices.
 
         const blue = color( 0,0,1,1 ), yellow = color( 1,1,0,1 );
 
@@ -319,16 +312,50 @@ export class Subway_Surf extends Subway_Surf_Base
         }
 
         this.scout.draw(context, program_state, transform_scout, this.materials.metal.override({color: yellow}), phase);
-        this.shapes.square.draw(context, program_state, Mat4.rotation(Math.PI/2, 1,0,0), this.materials.metal);
 
-        this.shapes.block.draw(context, program_state, Mat4.identity().times(Mat4.translation(0, 0, -10)), this.materials.block);
+        let block_transform = Mat4.identity().times(Mat4.translation(0, 0, -10 + 2 * t));
+
+        this.shapes.block.draw(context, program_state, block_transform, this.materials.plastic);
 
 
+        let scout = new Object(transform_scout, vec3(0.75, 0.75, 0.5));
+        let block = new Object(block_transform, vec3(1, 1, 0.25));
+        console.log(scout)
+
+        if (scout.check_collide(block)) {
+            this.shapes.square.draw(context, program_state, Mat4.rotation(Math.PI/2, 1,0,0), this.
+            materials.metal.override({color: color(1, 1, 1, 1)}));
+        }
+        else {
+            this.shapes.square.draw(context, program_state, Mat4.rotation(Math.PI/2, 1,0,0), this.materials.metal);
+        }
         // Note that our coordinate system stored in model_transform still has non-uniform scaling
         // due to our scale() call.  This could have undesired effects for subsequent transforms;
         // rotations will behave like shears.  To avoid this it may have been better to do the
         // scale() last and then immediately unscale after the draw.  Or better yet, don't store
         // the scaled matrix back in model_transform at all -- but instead in just a temporary
         // expression that we pass into draw(), or store under a different name.
+    }
+}
+
+
+class Object
+{
+    constructor(model_transform, bound) {
+        this.center_point = model_transform.times(vec4(0, 0, 0, 1));
+        this.upper_bound = vec3(this.center_point[0] + bound[0], this.center_point[1] + bound[1],
+            this.center_point[2] + bound[2]);
+        this.lower_bound = vec3(this.center_point[0] - bound[0], this.center_point[1] - bound[1],
+            this.center_point[2] - bound[2]);
+    }
+
+    check_collide(target_object) {
+        let count = 0;
+        for (let i = 0; i < 3; i++) {
+            if (this.lower_bound[i] <= target_object.upper_bound[i] && target_object.lower_bound[i] <= this.upper_bound[i]) {
+                count++;
+            }
+        }
+        return count === 3;
     }
 }

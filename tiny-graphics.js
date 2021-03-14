@@ -261,7 +261,35 @@ const unsafe4 = tiny.unsafe4 = Vector4.unsafe;
 
       // **Color** is just an alias for class Vector4.  Colors should be made as special 4x1
       // vectors expressed as ( red, green, blue, opacity ) each ranging from 0 to 1.
-const color = tiny.color = Vector4.create;
+// const color = tiny.color = Vector4.create;
+const Color = tiny.Color =
+    class Color extends Vector4 {
+      // Create color from RGBA floats
+      static create_from_float(r, g, b, a) {
+        const v = new Vector4(4);
+        v[0] = r;
+        v[1] = g;
+        v[2] = b;
+        v[3] = a;
+        return v;
+      }
+
+      // Create color from hexadecimal numbers, e.g., #FFFFFF
+      static create_from_hex(hex, alpha = 1.) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        const v = new Vector4(4);
+        if (result) {
+          v[0] = parseInt(result[1], 16) / 255.;
+          v[1] = parseInt(result[2], 16) / 255.;
+          v[2] = parseInt(result[3], 16) / 255.;
+          v[3] = alpha;
+        }
+        return v;
+      }
+    }
+
+const color = tiny.color = Color.create_from_float;
+const hex_color = tiny.hex_color = Color.create_from_hex;
 
 const Matrix = tiny.Matrix =
 class Matrix extends Array                         
@@ -340,7 +368,7 @@ class Mat4 extends Matrix
                                                     // All the methods below return a certain 4x4 matrix.
   static identity()
     { return Matrix.of( [ 1,0,0,0 ], [ 0,1,0,0 ], [ 0,0,1,0 ], [ 0,0,0,1 ] ); };
-  static rotation( angle, x,y,z )
+  static rotation( angle, x,y,z , x0=0, y0=0, z0=0)
     {                                               // rotation(): Requires a scalar (angle) and a three-component axis vector.
       const normalize = ( x,y,z ) =>
         { const n = Math.sqrt( x*x + y*y + z*z );

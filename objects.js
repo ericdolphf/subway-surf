@@ -8,9 +8,9 @@ export {objs};
 
 function intercept(range1, range2) {
     // range = [range_max, range_min]
-    return (range2[0] < range1[0] && range2[0] > range1[1])
-        || (range2[1] < range1[0] && range2[1] > range1[1])
-        || (range2[0] > range1[0] && range2[1] < range1[1]);
+    return (range2[0] <= range1[0] && range2[0] >= range1[1])
+        || (range2[1] <= range1[0] && range2[1] >= range1[1])
+        || (range2[0] >= range1[0] && range2[1] <= range1[1]);
 }
 
 class Cube_Outline extends Shape {

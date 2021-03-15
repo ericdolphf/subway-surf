@@ -339,6 +339,11 @@ export class Surf_Scout extends Surf_Scout_Base
             this.reset();
             program_state.curr_dist = 0; /* Needs Reset */
             this.start_flag = 0;
+            let transform_camera = Mat4.inverse(Mat4.identity()
+                .times(Mat4.translation( this.camera_pos[0], this.camera_pos[1], this.camera_pos[2] ))
+                .times(Mat4.rotation(-this.camera_angle, 1,0,0))
+            );
+            program_state.set_camera( transform_camera );
         }
 
         if (this.start === 0) {

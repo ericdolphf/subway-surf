@@ -114,6 +114,7 @@ export class Surf_Scout_Base extends Scene
 
         this.flag_outline = true; // for debugging
 
+        this.score = 0; /* Needs Reset */
         this.start = this.start_flag = 0;
 
         this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
@@ -162,7 +163,9 @@ export class Surf_Scout_Base extends Scene
         this.object_types = [new objs.Road_Block()];
         this.object_gen_rate = 0.8; // # objects per second
         this.object_count = 0; /* Needs Reset */
-        this.max_object_count = 5; /* Needs Reset */
+        this.min_difficulty = 7;
+        this.max_difficulty = 12;
+        this.max_object_count = Math.floor((this.min_difficulty + this.max_difficulty)/2); /* Needs Reset */
         this.objects = []; /* Needs Reset */
 
         this.tunnel_width = 3*this.rail_width + 0.5;
@@ -218,27 +221,35 @@ export class Surf_Scout_Base extends Scene
     {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
         // buttons with key bindings for affecting this scene, and live info readouts.
 
+        let silver = '#949393';
+
         // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
-        this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else this.start = 0;});
+        this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0 && !this.pause) this.start_flag = 1; else this.start = 0;}, silver);
         this.new_line();
-        this.key_triggered_button( "High Jump", [ "8" ], () => { if (!this.jump && !this.down && !this.recover) {this.jump_start = true; this.jump_kind = 0; } } );
-        this.new_line();
-        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (!this.jump && !this.down && !this.recover) {this.jump_start = true; this.jump_kind = 1; } } );
-        this.new_line();
-        this.key_triggered_button( "Switch Left", [ "j" ], () => { if (this.scout.curr_x > -this.rail_width) {this.switch_left = true; this.switch_right = false;} } );
-        this.new_line();
-        this.key_triggered_button( "Switch Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width) {this.switch_left = false; this.switch_right = true;} } );
-        this.new_line();
-        this.key_triggered_button( "Lie Down", [ "k" ], () => { this.down_start = true; }, undefined, () => { this.down_start = false; });
-        this.new_line();
-        this.key_triggered_button( "Hold to Speed Up", [ "\\" ], () => { this.speedup = true; }, undefined, () => { this.speedup = false });
-        this.new_line();
+        this.key_triggered_button( "High Jump", [ "8" ], () => { if (!this.jump && !this.down && !this.recover && !this.pause) {this.jump_start = true; this.jump_kind = 0; } } , silver);
+        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (!this.jump && !this.down && !this.recover && !this.pause) {this.jump_start = true; this.jump_kind = 1; } }, silver );
+        this.key_triggered_button( "Move Left", [ "j" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
+        this.key_triggered_button( "Move Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
+        this.key_triggered_button( "Lie Down", [ "k" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
+        this.key_triggered_button( "Hold to Speed Up", [ "\\" ], () => { if (!this.pause) this.speedup = true; }, silver, () => { if (!this.pause) this.speedup = false });
         this.key_triggered_button( "Pause/Resume", [ "=" ], () => {
             this.pause ^= true;
-        } );
+        } ,silver);
+        this.new_line();
+        this.new_line();
+        let color_easy = '#3ff13f';
+        let color_hard = '#f17241';
+        this.key_triggered_button("- (at least " + this.min_difficulty.toString() + ")", ["["], () => { this.max_object_count = Math.max(this.max_object_count-1, this.min_difficulty); }, color_easy);
+        this.new_line();
+        this.new_line();
+        this.live_string( box => { box.textContent = "Current Difficulty: " + this.max_object_count.toString() });
+        this.new_line();
+        this.new_line();
+        this.key_triggered_button("+ (at most " + this.max_difficulty.toString() + ")", ["]"], () => { this.max_object_count = Math.min(this.max_object_count+1, this.max_difficulty); }, color_hard);
     }
     reset() {
         this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
+        this.score = 0; /* Needs Reset */
         this.floor = 0; /* Needs Reset */
         this.t_jump = 0; /* Needs Reset */
         this.jump_start = false; /* Needs Reset */
@@ -253,7 +264,7 @@ export class Surf_Scout_Base extends Scene
         this.down = false; /* Needs Reset */
         this.recover = false; /* Needs Reset */
         this.object_count = 0; /* Needs Reset */
-        this.max_object_count = 5; /* Needs Reset */
+        this.max_object_count = Math.floor((this.min_difficulty + this.max_difficulty)/2); /* Needs Reset */
         this.objects = []; /* Needs Reset */
     }
     display( context, program_state )
@@ -328,16 +339,25 @@ export class Surf_Scout extends Surf_Scout_Base
         }
 
         if (this.start === 0) {
-            let scale_text = 0.07;
-            let lines = ['Hit \'Enter\'', 'to Start', 'Surfing!'];
             let transform_lines = program_state.camera_transform
-                .times(Mat4.translation(-Math.tan(Math.PI/8) * context.width/context.height + scale_text, Math.tan(Math.PI/8)-scale_text, -1.01))
+                .times(Mat4.translation(0,0, -1.01))
             ;
-            for (let line of lines) {
-                this.shapes.text.set_string(line, context.context);
-                this.shapes.text.draw(context, program_state, transform_lines.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image);
-                transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
-            }
+
+            let line = 'Scores Earned: ' + Math.floor(this.score).toString();
+            let n_char = line.length;
+            let scale_text = 0.04;
+            let transform_line = transform_lines.times(Mat4.translation(- n_char * 1.5 * scale_text / 2, scale_text, 0));
+            this.shapes.text.set_string(line, context.context);
+            this.shapes.text.draw(context, program_state, transform_line.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image);
+            transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
+
+            line = 'Hit \'Enter\' to Start Surfing!';
+            n_char = line.length;
+            scale_text = 0.02;
+            transform_line = transform_lines.times(Mat4.translation(- n_char * 1.5 * scale_text / 2, scale_text, 0));
+            this.shapes.text.set_string(line, context.context);
+            this.shapes.text.draw(context, program_state, transform_line.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image);
+
             return;
         }
 
@@ -357,6 +377,7 @@ export class Surf_Scout extends Surf_Scout_Base
             this.omega_scout_sway = mix(this.omega_scout_sway, this.speedup ? this.omega_scout_sway_0 * this.v_scout_hi / this.v_scout_lo : this.omega_scout_sway_0, 0.1);
             this.v_switch = this.v_switch_0;
             program_state.curr_dist += dt * this.v_scout;
+            this.score += dt * this.v_scout * (1 + (this.max_object_count-this.min_difficulty)/(this.max_difficulty-this.min_difficulty));
         }
 
         // set the variables in program_state to pass to the shader
@@ -459,8 +480,8 @@ export class Surf_Scout extends Surf_Scout_Base
 
         this.shapes.tunnel.draw(context, program_state, Mat4.identity(), this.scene_near, this.materials.tunnel);
 
-        let scale_text = 0.02;
-        let lines = ['Distance Traveled:', Math.floor(program_state.curr_dist).toString()];
+        let scale_text = 0.015;
+        let lines = ['Current Score: ', Math.floor(this.score).toString()];
         let transform_lines = program_state.camera_transform
             .times(Mat4.translation(-Math.tan(Math.PI/8) * context.width/context.height + scale_text, Math.tan(Math.PI/8)-scale_text, -1.01))
         ;
@@ -469,6 +490,14 @@ export class Surf_Scout extends Surf_Scout_Base
             this.shapes.text.draw(context, program_state, transform_lines.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image);
             transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
         }
+
+        let line = "Current Difficulty: " + this.max_object_count.toString();
+        let transform_line = transform_lines.times(Mat4.translation(0,-scale_text * 2, 0));
+        let color_easy = hex_color('#00FF00');
+        let color_hard = hex_color('#FF5100');
+        let color_curr = color_easy.mix(color_hard, (this.max_object_count-this.min_difficulty)/(this.max_difficulty-this.min_difficulty));
+        this.shapes.text.set_string(line, context.context);
+        this.shapes.text.draw(context, program_state, transform_lines.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image.override(color_curr));
 
         // Note that our coordinate system stored in model_transform still has non-uniform scaling
         // due to our scale() call.  This could have undesired effects for subsequent transforms;

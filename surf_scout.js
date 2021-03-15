@@ -266,6 +266,9 @@ export class Surf_Scout_Base extends Scene
         this.object_count = 0; /* Needs Reset */
         this.max_object_count = Math.floor((this.min_difficulty + this.max_difficulty)/2); /* Needs Reset */
         this.objects = []; /* Needs Reset */
+
+        this.scout.curr_x = 0; /* Needs Reset */
+        this.scout.curr_h = 0; /* Needs Reset */
     }
     display( context, program_state )
     {                                                // display():  Called once per frame of animation.  We'll isolate out

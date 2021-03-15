@@ -91,8 +91,8 @@ class Scout extends Object {
         this.sway_phase = 0;
         this.sway_amp = Math.PI/6;
 
-        this.curr_x = 0;
-        this.curr_h = 0;
+        this.curr_x = 0; /* Needs Reset */
+        this.curr_h = 0; /* Needs Reset */
 
         this.transforms = {
             body: Mat4.identity()

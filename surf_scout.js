@@ -1,5 +1,4 @@
 import {tiny, defs} from './examples/common.js';
-import {Shape_From_File} from "./examples/obj-file-demo.js";
 import {objs} from './objects.js'
 import {txts} from './textures.js'
 
@@ -7,71 +6,53 @@ import {txts} from './textures.js'
 const { vec3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
-class Scout {
-    constructor() {
-        this.transforms = {
-            body: Mat4.identity()
-                .times(Mat4.scale(0.5,0.75,0.5))
-            ,
-            head: Mat4.identity()
-                .times(Mat4.translation(0, 1.1,0))
-                .times(Mat4.scale(0.45,0.45,0.45))
-            ,
-            left_leg: Mat4.translation(-0.3,-1,0)
-                .times(Mat4.scale(0.25,0.6,0.25))
-            ,
-            right_leg: Mat4.translation(0.3,-1,0)
-                .times(Mat4.scale(0.25,0.6,0.25))
-            ,
-            left_arm: Mat4.translation(-0.8,0,0)
-                .times(Mat4.rotation(-Math.PI/4, 0,0,1))
-                .times(Mat4.scale(0.25, 0.6, 0.25))
-            ,
-            right_arm: Mat4.translation(0.8,0,0)
-                .times(Mat4.rotation(Math.PI/4, 0,0,1))
-                .times(Mat4.scale(0.25, 0.6, 0.25))
-            ,
-        }
+function mix(src, tar, rate) {
+    return (1-rate) * src + rate * tar;
+}
 
-        this.shapes = {
-            sphere: new defs.Subdivision_Sphere(5),
+class Text_Line extends Shape
+{                           // **Text_Line** embeds text in the 3D world, using a crude texture
+                            // method.  This Shape is made of a horizontal arrangement of quads.
+                            // Each is textured over with images of ASCII characters, spelling
+                            // out a string.  Usage:  Instantiate the Shape with the desired
+                            // character line width.  Then assign it a single-line string by calling
+                            // set_string("your string") on it. Draw the shape on a material
+                            // with full ambient weight, and text.png assigned as its texture
+                            // file.  For multi-line strings, repeat this process and draw with
+                            // a different matrix.
+    constructor( max_size )
+    { super( "position", "normal", "texture_coord" );
+        this.max_size = max_size;
+        var object_transform = Mat4.identity();
+        for( var i = 0; i < max_size; i++ )
+        {                                       // Each quad is a separate Square instance:
+            defs.Square.insert_transformed_copy_into( this, [], object_transform );
+            object_transform.post_multiply( Mat4.translation( 1.5,0,0 ) );
         }
     }
+    set_string( line, context )
+    {           // set_string():  Call this to overwrite the texture coordinates buffer with new
+        // values per quad, which enclose each of the string's characters.
+        this.arrays.texture_coord = [];
+        for( var i = 0; i < this.max_size; i++ )
+        {
+            var row = Math.floor( ( i < line.length ? line.charCodeAt( i ) : ' '.charCodeAt() ) / 16 ),
+                col = Math.floor( ( i < line.length ? line.charCodeAt( i ) : ' '.charCodeAt() ) % 16 );
 
-    draw(context, program_state, transform_basis, material, phase) {
-        let transform_body = transform_basis
-            .times(this.transforms.body)
-        ;
-        this.shapes.sphere.draw(context, program_state, transform_body, material);
+            var skip = 3, size = 32, sizefloor = size - skip;
+            var dim = size * 16,
+                left  = (col * size + skip) / dim,      top    = (row * size + skip) / dim,
+                right = (col * size + sizefloor) / dim, bottom = (row * size + sizefloor + 5) / dim;
 
-        let transform_head =  transform_basis
-            .times(this.transforms.head)
-        ;
-        this.shapes.sphere.draw(context, program_state, transform_head, material);
-
-        let transform_left_leg = transform_basis
-            .times(Mat4.rotation(phase, 1, 0, 0))
-            .times(this.transforms.left_leg)
-        ;
-        this.shapes.sphere.draw(context, program_state, transform_left_leg, material);
-
-        let transform_right_leg = transform_basis
-            .times(Mat4.rotation(-phase, 1, 0, 0))
-            .times(this.transforms.right_leg)
-        ;
-        this.shapes.sphere.draw(context, program_state, transform_right_leg, material);
-
-        let transform_left_arm =  transform_basis
-            .times(Mat4.rotation(phase, 0,1,0))
-            .times(this.transforms.left_arm)
-        ;
-        this.shapes.sphere.draw(context, program_state, transform_left_arm, material);
-
-        let transform_right_arm =  transform_basis
-            .times(Mat4.rotation(phase, 0,1,0))
-            .times(this.transforms.right_arm)
-        ;
-        this.shapes.sphere.draw(context, program_state, transform_right_arm, material);
+            this.arrays.texture_coord.push( ...tiny.Vector.cast( [ left,  1-bottom], [ right, 1-bottom ],
+                [ left,  1-top   ], [ right, 1-top    ] ) );
+        }
+        if( !this.existing )
+        { this.copy_onto_graphics_card( context );
+            this.existing = true;
+        }
+        else
+            this.copy_onto_graphics_card( context, ["texture_coord"], false );
     }
 }
 
@@ -82,11 +63,18 @@ class Tunnel {
 
         this.shapes = {
             tunnel_top: new defs.Surface_Of_Revolution(2, 50, tiny.Vector3.cast([r*Math.cos(arc_start_angle), r*Math.sin(arc_start_angle), 0],[r*Math.cos(arc_start_angle), r*Math.sin(arc_start_angle), -length]), [[0, r*(Math.PI - 2*arc_start_angle)/2],[0, length/2]], Math.PI - 2*arc_start_angle),
-            tunnel_wall: new defs.Square(),
+            tunnel_wall_left: new defs.Square(),
+            tunnel_wall_right: new defs.Square(),
             tunnel_ground: new defs.Square()
         };
-        this.shapes.tunnel_wall.arrays.texture_coord = [[0,0],[height_side/2,0],[0, length/2],[height_side/2, length/2]];
-        this.shapes.tunnel_ground.arrays.texture_coord = [[0,0],[width/2, 0],[0,length/2],[width/2, length/2]];
+        this.shapes.tunnel_wall_left.arrays.texture_coord = [[0,height_side/2], [0,0], [length/2, height_side/2], [length/2, 0]];
+        this.shapes.tunnel_wall_right.arrays.texture_coord = [[0,0], [0,height_side/2], [length/2, 0], [length/2, height_side/2]];
+        this.shapes.tunnel_ground.arrays.texture_coord = [[0,width/2], [0,0], [length/2, width/2], [length/2, 0]];
+        for (let i = 0; i < this.shapes.tunnel_top.arrays.texture_coord.length; i++) {
+            let temp = this.shapes.tunnel_top.arrays.texture_coord[i][0];
+            this.shapes.tunnel_top.arrays.texture_coord[i][0] = this.shapes.tunnel_top.arrays.texture_coord[i][1];
+            this.shapes.tunnel_top.arrays.texture_coord[i][1] = temp;
+        }
 
         this.transforms = {
             tunnel_top: Mat4.translation(0, height_top-r, 0),
@@ -107,8 +95,8 @@ class Tunnel {
     draw(context, program_state, transform_basis, start_dist, material) {
         transform_basis = transform_basis.times(Mat4.translation(0,-0.1,-start_dist));
         this.shapes.tunnel_top.draw(context, program_state, transform_basis.times(this.transforms.tunnel_top), material);
-        this.shapes.tunnel_wall.draw(context, program_state, transform_basis.times(this.transforms.tunnel_wall_left), material);
-        this.shapes.tunnel_wall.draw(context, program_state, transform_basis.times(this.transforms.tunnel_wall_right), material);
+        this.shapes.tunnel_wall_left.draw(context, program_state, transform_basis.times(this.transforms.tunnel_wall_left), material);
+        this.shapes.tunnel_wall_right.draw(context, program_state, transform_basis.times(this.transforms.tunnel_wall_right), material);
         this.shapes.tunnel_ground.draw(context, program_state, transform_basis.times(this.transforms.tunnel_ground), material);
     }
 }
@@ -124,42 +112,11 @@ export class Surf_Scout_Base extends Scene
     {                  // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
-        this.floor = 0;
-        this.curr_rail = 0;
+        this.flag_outline = true; // for debugging
 
-        this.t_jump = 0;
-        this.h_hi = 1.5;
-        this.h_lo = 0.75;
-        this.g = 15;
-        this.v_hi = Math.sqrt(2*this.g*this.h_hi);
-        this.v_lo = Math.sqrt(2*this.g*this.h_lo);
-        this.jump_start = false;
-        this.jump = false;
-        this.jump_kind = 0; // 0 for high jump, 1 for low jump;
+        this.start = this.start_flag = 0;
 
-        this.t_switch = 0;
-        this.rail_width = 2;
-        this.v_switch = 10;
-        this.switch_start = 0;
-        this.switch_left = false;
-        this.switch_right = false;
-
-        this.omega_down = 2*Math.PI * 2;
-        this.angle_down = 0;
-        this.down_start = false;
-        this.down = false;
-        this.recover = false;
-
-        this.v_scout_0 = this.v_scout = 10;
-        this.omega_scout_sway_0 = this.omega_scout_sway = 10;
-
-        this.object_types = [new objs.Road_Block(this.scene_far, this.scene_near)];
-        this.object_count = 0;
-        this.max_object_count = 5;
-        this.objects = [];
-        this.object_gen_rate = 0.8; // # objects per second
-
-        this.camera_pos = vec3(0, 5, 6);
+        this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
         this.camera_angle = Math.PI/6; // > PI/8 to limit the view
 
         this.scene_far = this.camera_pos[1] / Math.tan(this.camera_angle - Math.PI/8) - this.camera_pos[2];
@@ -167,20 +124,63 @@ export class Surf_Scout_Base extends Scene
         this.scene_near = -this.camera_pos[2];
         this.scene_near = Math.floor(this.scene_near/10) * 10;
 
-        let tunnel_width = 3*this.rail_width + 0.5;
-        let tunnel_height_side = this.camera_pos[1] - 1.5;
-        let tunnel_height_top = this.camera_pos[1] + 1;
-        let tunnel_length = this.scene_far-this.scene_near;
+        this.rail_width = 2;
+        this.floor = 0; /* Needs Reset */
+
+        this.t_jump = 0; /* Needs Reset */
+        this.h_lo = this.camera_pos[1] * 0.3;
+        this.h_hi = this.camera_pos[1] * 0.6;
+        this.g = 35;
+        this.v_hi = Math.sqrt(2*this.g*this.h_hi);
+        this.v_lo = Math.sqrt(2*this.g*this.h_lo);
+        this.jump_start = false; /* Needs Reset */
+        this.jump = false; /* Needs Reset */
+        this.jump_kind = 0; // 0 for high jump, 1 for low jump;
+
+        this.v_scout_lo = 10;
+        this.v_scout_hi = 1.5 * this.v_scout_lo;
+
+        this.speedup = false;
+        this.omega_scout_sway_0 = 10;
+        this.v_switch_0 = 10;
+
+        this.omega_scout_sway = this.omega_scout_sway_0; /* Needs Reset */
+        this.v_scout = this.v_scout_lo; /* Needs Reset */
+        this.v_switch = this.v_switch_0; /* Needs Reset */
+
+        this.pause = false; /* Needs Reset */
+
+        this.switch_left = false; /* Needs Reset */
+        this.switch_right = false; /* Needs Reset */
+
+        this.omega_down = 2*Math.PI * 2;
+        this.down_start = false; /* Needs Reset */
+        this.down = false; /* Needs Reset */
+        this.recover = false; /* Needs Reset */
+
+
+        this.object_types = [new objs.Road_Block()];
+        this.object_gen_rate = 0.8; // # objects per second
+        this.object_count = 0; /* Needs Reset */
+        this.max_object_count = 5; /* Needs Reset */
+        this.objects = []; /* Needs Reset */
+
+        this.tunnel_width = 3*this.rail_width + 0.5;
+        this.tunnel_height_side = this.camera_pos[1] - 1.5;
+        this.tunnel_height_top = this.camera_pos[1] + 1;
+        this.tunnel_length = this.scene_far-this.scene_near;
 
         this.rail_stretch = 3.5;
 
+
+        this.scout = new objs.Scout();
         this.shapes = {
             box  : new Cube(),
             ball : new Subdivision_Sphere( 4 ),
             square  : new Square(),
-            scout :  new Scout(),
             rail: new Square(),
-            tunnel: new Tunnel(tunnel_width, tunnel_height_side, tunnel_height_top, tunnel_length)
+            tunnel: new Tunnel(this.tunnel_width, this.tunnel_height_side, this.tunnel_height_top, this.tunnel_length),
+            text: new Text_Line(35)
         };
         this.shapes.rail.arrays.texture_coord = tiny.Vector.cast([0,0], [1,0], [0, (this.scene_far-this.scene_near)/this.rail_width/this.rail_stretch], [1, (this.scene_far-this.scene_near)/this.rail_width/this.rail_stretch]);
 
@@ -199,35 +199,62 @@ export class Surf_Scout_Base extends Scene
             }),
             rail: new Material(new txts.Texture_Rail(), {
                 color: hex_color("#000000"),
-                ambient: .5, diffusivity: 0.1, specularity: 0.1,
+                ambient: .7, diffusivity: 0.1, specularity: 0.1,
                 texture: new Texture("assets/rail.png", "NEAREST") // texture source: https://tekkitclassic.fandom.com/wiki/Track
             }),
             tunnel: new Material(new txts.Texture_Tunnel(), {
                 color: hex_color("#000000"),
-                ambient: .5, diffusivity: 0.1, specularity: 0.1,
-                texture: new Texture("assets/tunnel1.jpg", "NEAREST") // texture source: https://nl.pinterest.com/pin/638807528370979541/
+                ambient: .6, diffusivity: 0.3, specularity: 0.1,
+                texture: new Texture("assets/tunnel4.jpg", "NEAREST") // texture source: https://nl.pinterest.com/pin/638807528370979541/
             }),
+            text_image: new Material(new defs.Textured_Phong(1), {
+                color: hex_color("#ff7700"),
+                ambient: 0.5, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/text.png")
+            })
         };
     }
     make_control_panel()
     {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
         // buttons with key bindings for affecting this scene, and live info readouts.
-        this.control_panel.innerHTML += "Dragonfly rotation angle: <br>";
-        // The next line adds a live text readout of a data member of our Scene.
-        this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
+
+        // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
+        this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else this.start = 0;});
         this.new_line();
-        // Add buttons so the user can actively toggle data members of our Scene:
-        this.key_triggered_button( "High Jump", [ "8" ], () => { if (!this.jump && !this.down && !this.recover) {this.jump_start = 1; this.jump_kind = 0; } } );
+        this.key_triggered_button( "High Jump", [ "8" ], () => { if (!this.jump && !this.down && !this.recover) {this.jump_start = true; this.jump_kind = 0; } } );
         this.new_line();
-        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (!this.jump && !this.down && !this.recover) {this.jump_start = 1; this.jump_kind = 1; } } );
+        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (!this.jump && !this.down && !this.recover) {this.jump_start = true; this.jump_kind = 1; } } );
         this.new_line();
-        this.key_triggered_button( "Switch Left", [ "j" ], () => { if (!(this.switch_left || this.switch_right)) {this.switch_start = 1} } );
+        this.key_triggered_button( "Switch Left", [ "j" ], () => { if (this.scout.curr_x > -this.rail_width) {this.switch_left = true; this.switch_right = false;} } );
         this.new_line();
-        this.key_triggered_button( "Switch Right", [ "l" ], () => { if(!(this.switch_left || this.switch_right)) {this.switch_start = -1} } );
+        this.key_triggered_button( "Switch Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width) {this.switch_left = false; this.switch_right = true;} } );
         this.new_line();
         this.key_triggered_button( "Lie Down", [ "k" ], () => { this.down_start = true; }, undefined, () => { this.down_start = false; });
         this.new_line();
-        this.key_triggered_button( "Pause/Resume", [ "=" ], () => { this.v_scout = (this.v_scout === 0 ? this.v_scout_0 : 0); this.omega_scout_sway = (this.omega_scout_sway === 0 ? this.omega_scout_sway_0 : 0); } );
+        this.key_triggered_button( "Hold to Speed Up", [ "\\" ], () => { this.speedup = true; }, undefined, () => { this.speedup = false });
+        this.new_line();
+        this.key_triggered_button( "Pause/Resume", [ "=" ], () => {
+            this.pause ^= true;
+        } );
+    }
+    reset() {
+        this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
+        this.floor = 0; /* Needs Reset */
+        this.t_jump = 0; /* Needs Reset */
+        this.jump_start = false; /* Needs Reset */
+        this.jump = false; /* Needs Reset */
+        this.omega_scout_sway = this.omega_scout_sway_0; /* Needs Reset */
+        this.v_scout = this.v_scout_lo; /* Needs Reset */
+        this.v_switch = this.v_switch_0; /* Needs Reset */
+        this.pause = false; /* Needs Reset */
+        this.switch_left = false; /* Needs Reset */
+        this.switch_right = false; /* Needs Reset */
+        this.down_start = false; /* Needs Reset */
+        this.down = false; /* Needs Reset */
+        this.recover = false; /* Needs Reset */
+        this.object_count = 0; /* Needs Reset */
+        this.max_object_count = 5; /* Needs Reset */
+        this.objects = []; /* Needs Reset */
     }
     display( context, program_state )
     {                                                // display():  Called once per frame of animation.  We'll isolate out
@@ -252,6 +279,7 @@ export class Surf_Scout_Base extends Scene
             program_state.set_camera( transform_camera );
             program_state.rail_width = this.rail_width; // set the rail_width to pass to shader
             program_state.rail_stretch = this.rail_stretch;
+            program_state.curr_dist = 0; /* Needs Reset */
         }
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
 
@@ -289,53 +317,115 @@ export class Surf_Scout extends Surf_Scout_Base
             // translation(), scale(), and rotation() to generate matrices, and the
             // function times(), which generates products of matrices.
 
+
         const blue = color(0, 0, 1, 1), yellow = color(1, 1, 0, 1);
+
+        if (this.start_flag === 1) {
+            this.start = 1;
+            this.reset();
+            program_state.curr_dist = 0; /* Needs Reset */
+            this.start_flag = 0;
+        }
+
+        if (this.start === 0) {
+            let scale_text = 0.07;
+            let lines = ['Hit \'Enter\'', 'to Start', 'Surfing!'];
+            let transform_lines = program_state.camera_transform
+                .times(Mat4.translation(-Math.tan(Math.PI/8) * context.width/context.height + scale_text, Math.tan(Math.PI/8)-scale_text, -1.01))
+            ;
+            for (let line of lines) {
+                this.shapes.text.set_string(line, context.context);
+                this.shapes.text.draw(context, program_state, transform_lines.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image);
+                transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
+            }
+            return;
+        }
 
         // Find how much time has passed in seconds; we can use
         // time as an input when calculating new transforms:
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
+        // get the value of this.v_scout
+        this.v_scout = mix(this.v_scout, this.speedup ? this.v_scout_hi : this.v_scout_lo, 0.3);
+
+        if (this.pause) {
+            this.v_scout = 0;
+            this.omega_scout_sway = 0;
+            this.v_switch = 0;
+        } else {
+            this.v_scout = mix(this.v_scout, this.speedup ? this.v_scout_hi : this.v_scout_lo, 0.1);
+            this.omega_scout_sway = mix(this.omega_scout_sway, this.speedup ? this.omega_scout_sway_0 * this.v_scout_hi / this.v_scout_lo : this.omega_scout_sway_0, 0.1);
+            this.v_switch = this.v_switch_0;
+            program_state.curr_dist += dt * this.v_scout;
+        }
+
         // set the variables in program_state to pass to the shader
         program_state.v_scout = this.v_scout;
 
-        let exp_frame_per_object = Math.floor(1/(dt * this.object_gen_rate));
-        if (this.object_count <= this.max_object_count && (Math.floor(Math.random() * exp_frame_per_object) % exp_frame_per_object === Math.floor(exp_frame_per_object / 2))) {
+        // randomly generate objects
+        let expect_frame_per_object = Math.floor(1/(dt * this.object_gen_rate));
+        if (this.object_count < this.max_object_count && (Math.floor(Math.random() * expect_frame_per_object) % expect_frame_per_object === Math.floor(expect_frame_per_object / 2))) {
             this.objects.push({ind: 0, curr_dist: this.scene_far, rail_ind: Math.floor(Math.random() * 3)-1});
             this.object_count += 1;
         }
 
-        for (let i = 0; i < this.object_count;) {
+        // draw and process existing objects
+        for (let i = 0; i < this.object_count; i++) {
             let obj_type = this.object_types[this.objects[i].ind];
             this.objects[i].curr_dist -= dt * this.v_scout;
-            obj_type.draw(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind);
-            if (this.objects[i].curr_dist < this.scene_near) {
+            if (this.objects[i].curr_dist >= this.scene_near) {
+                if (this.scout.check_collision(obj_type, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width)) {
+                    this.start = 0;
+                    return;
+                }
+                obj_type.draw(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind);
+
+                if (this.flag_outline) obj_type.draw_outline(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width);
+            } else {
+                // object goes out of the view, remove it from the object list
                 this.objects.splice(i, 1);
                 this.object_count -= 1;
-                continue;
+                i--; // since the current element is removed, restore the index by one to not skip any element
             }
-            i++;
         }
 
-        let phase = Math.PI/6*Math.cos(this.omega_scout_sway*t);
-        let transform_scout = Mat4.translation(this.curr_rail * this.rail_width, 0, 0)
-            .times(Mat4.scale(0.3,0.3,0.3))
-        ;
+        let transform_scout = Mat4.identity();
 
+        // set the switch rail movement:
+        if (this.switch_left) {
+            let prev_x = this.scout.curr_x;
+            this.scout.curr_x -= this.v_switch * dt;
+            if (Math.ceil(prev_x / this.rail_width) !== Math.ceil(this.scout.curr_x / this.rail_width)) {
+                this.switch_left = false;
+                this.scout.curr_x = Math.ceil(this.scout.curr_x / this.rail_width) * this.rail_width;
+            }
+        }
+        if (this.switch_right) {
+            let prev_x = this.scout.curr_x;
+            this.scout.curr_x += this.v_switch * dt;
+            if (Math.floor(prev_x / this.rail_width) !== Math.floor(this.scout.curr_x / this.rail_width)) {
+                this.switch_right = false;
+                this.scout.curr_x = Math.floor(this.scout.curr_x / this.rail_width) * this.rail_width;
+            }
+        }
+
+        // set the jump movement:
         if (this.jump_start && !this.jump && !this.down) {
             this.t_jump = t;
             this.jump = true;
             this.jump_start = false;
         }
         if (this.jump) {
-            let h = this.floor + (this.jump_kind === 0 ? this.v_hi : this.v_lo) * (t-this.t_jump) - 1/2 * this.g * (t-this.t_jump)**2;
-            transform_scout = Mat4.translation(0, h, 0).times(transform_scout);
-            if (h <= this.floor && t !== this.t_jump) {
+            this.scout.curr_h = this.floor + (this.jump_kind === 0 ? this.v_hi : this.v_lo) * (t-this.t_jump) - 1/2 * this.g * (t-this.t_jump)**2;
+            if (this.scout.curr_h <= this.floor && t !== this.t_jump) {
                 this.jump = false;
-            } else {
-                transform_scout = Mat4.translation(0, h, 0).times(transform_scout);
+                this.scout.curr_h = this.floor;
             }
         }
 
+        // set the sway movement:
+        this.scout.sway_phase += this.omega_scout_sway*dt;
+        this.scout.sway_phase %= 2*Math.PI;
         if (this.down_start && !this.jump) {
             this.down = true;
         }
@@ -344,54 +434,18 @@ export class Surf_Scout extends Surf_Scout_Base
             this.down = false;
         }
         if (this.down) {
-            this.angle_down = Math.min(Math.PI/2, this.angle_down + dt * this.omega_down);
-            phase = 0;
+            this.scout.angle_down = Math.min(Math.PI/2, this.scout.angle_down + dt * this.omega_down);
+            this.scout.sway_phase = 0;
         } else if (this.recover) {
-            this.angle_down = Math.max(0, this.angle_down - dt * this.omega_down);
-            if (this.angle_down === 0) {
+            this.scout.angle_down = Math.max(0, this.scout.angle_down - dt * this.omega_down);
+            if (this.scout.angle_down === 0) {
                 this.recover = false;
             }
-            phase = 0;
-        }
-        transform_scout = Mat4.translation(0, 0.15+0.35*Math.cos(this.angle_down),0).times(Mat4.rotation(this.angle_down, 1,0,0)).times(transform_scout);
-
-        if (this.switch_start === 1 && !this.switch_right && this.curr_rail >= 0) {
-            this.t_switch = t;
-            this.switch_left = true;
-            this.switch_start = 0;
-        }
-        if (this.switch_left) {
-            let dx = -this.v_switch * (t - this.t_switch);
-            if (dx <= -this.rail_width) {
-                this.switch_left = false;
-                this.curr_rail -= 1;
-                transform_scout = Mat4.translation(-this.rail_width, 0, 0)
-                    .times(transform_scout)
-                ;
-            } else {
-                transform_scout = Mat4.translation(dx, 0, 0).times(transform_scout);
-            }
+            this.scout.sway_phase = 0;
         }
 
-        if (this.switch_start === -1 && !this.switch_left && this.curr_rail <= 0) {
-            this.t_switch = t;
-            this.switch_right = true;
-            this.switch_start = 0;
-        }
-        if (this.switch_right) {
-            let dx = this.v_switch * (t - this.t_switch);
-            if (dx >= this.rail_width) {
-                this.switch_right = false;
-                this.curr_rail += 1;
-                transform_scout = Mat4.translation(this.rail_width, 0, 0)
-                    .times(transform_scout)
-                ;
-            } else {
-                transform_scout = Mat4.translation(dx, 0, 0).times(transform_scout);
-            }
-        }
-
-        this.shapes.scout.draw(context, program_state, transform_scout, this.materials.metal.override({color: yellow}), phase);
+        this.scout.draw(context, program_state);
+        if (this.flag_outline) this.scout.draw_outline(context, program_state);
 
         let transform_rail_basis = Mat4.translation(0,0, -this.scene_near)
             .times(Mat4.rotation(-Math.PI/2, 1,0,0))
@@ -404,6 +458,17 @@ export class Surf_Scout extends Surf_Scout_Base
         }
 
         this.shapes.tunnel.draw(context, program_state, Mat4.identity(), this.scene_near, this.materials.tunnel);
+
+        let scale_text = 0.02;
+        let lines = ['Distance Traveled:', Math.floor(program_state.curr_dist).toString()];
+        let transform_lines = program_state.camera_transform
+            .times(Mat4.translation(-Math.tan(Math.PI/8) * context.width/context.height + scale_text, Math.tan(Math.PI/8)-scale_text, -1.01))
+        ;
+        for (let line of lines) {
+            this.shapes.text.set_string(line, context.context);
+            this.shapes.text.draw(context, program_state, transform_lines.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image);
+            transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
+        }
 
         // Note that our coordinate system stored in model_transform still has non-uniform scaling
         // due to our scale() call.  This could have undesired effects for subsequent transforms;

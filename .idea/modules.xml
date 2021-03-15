@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/subway-surf.iml" filepath="$PROJECT_DIR$/.idea/subway-surf.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/surf_scout.iml" filepath="$PROJECT_DIR$/.idea/surf_scout.iml" />
     </modules>
   </component>
 </project>

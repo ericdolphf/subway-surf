@@ -228,14 +228,14 @@ export class Surf_Scout_Base extends Scene
         let silver = '#949393';
 
         // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
-        this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0 && !this.pause) this.start_flag = 1; else this.start = 0;}, silver);
+        this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else if (!this.pause) this.start = 0;}, silver);
         this.new_line();
         this.key_triggered_button( "High Jump", [ "8" ], () => { if (!this.jump && !this.down && !this.recover && !this.pause) {this.jump_start = true; this.jump_kind = 0; } } , silver);
         this.key_triggered_button( "Low Jump", [ "i" ], () => { if (!this.jump && !this.down && !this.recover && !this.pause) {this.jump_start = true; this.jump_kind = 1; } }, silver );
         this.key_triggered_button( "Move Left", [ "j" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
         this.key_triggered_button( "Move Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
         this.key_triggered_button( "Lie Down", [ "k" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
-        this.key_triggered_button( "Hold to Speed Up", [ "\\" ], () => { if (!this.pause) this.speedup = true; }, silver, () => { if (!this.pause) this.speedup = false });
+        this.key_triggered_button( "Speed Up/Down", [ "\\" ], () => { if (!this.pause) this.speedup ^= true; }, silver);//, () => { if (!this.pause) this.speedup = false });
         this.key_triggered_button( "Pause/Resume", [ "=" ], () => {
             this.pause ^= true;
         } ,silver);
@@ -273,6 +273,8 @@ export class Surf_Scout_Base extends Scene
 
         this.scout.curr_x = 0; /* Needs Reset */
         this.scout.curr_h = 0; /* Needs Reset */
+        this.scout.angle_down = 0; /* Needs Reset */
+        this.scout.sway_phase = 0; /* Needs Reset */
     }
     display( context, program_state )
     {
@@ -424,8 +426,6 @@ export class Surf_Scout extends Surf_Scout_Base
                 i--; // since the current element is removed, restore the index by one to not skip any element
             }
         }
-
-        let transform_scout = Mat4.identity();
 
         // set the switch rail movement:
         if (this.switch_left) {

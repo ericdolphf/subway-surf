@@ -66,7 +66,6 @@ class Object {
         let transform_stretch = this.get_stretch();
         let right_up_front = transform_collision.times(transform_stretch).times(vec4(this.right, this.up, this.front, 1));
         let left_down_rear = transform_collision.times(transform_stretch).times(vec4(this.left, this.down, this.rear, 1));
-        console.log(transform_collision);
         return [[right_up_front[0], left_down_rear[0]], [right_up_front[1], left_down_rear[1]], [right_up_front[2], left_down_rear[2]]];
     }
 
@@ -87,8 +86,8 @@ class Scout extends Object {
 
         this.scale = 0.3;
 
-        this.angle_down = 0;
-        this.sway_phase = 0;
+        this.angle_down = 0; /* Needs Reset */
+        this.sway_phase = 0; /* Needs Reset */
         this.sway_amp = Math.PI/6;
 
         this.curr_x = 0; /* Needs Reset */
@@ -189,7 +188,7 @@ class Scout extends Object {
 const Road_Block = objs.Road_Block =
 class Road_Block extends Object {
     constructor() {
-        super([0.75, -0.75],[1.25, 0],[0.5, -0.5]);
+        super([0.75, -0.75],[1.25, 0],[0.25, -0.25]);
 
         this.shape = new Shape_From_File("./assets/road-block-new.obj");
         this.material = new Material(new defs.Phong_Shader(),
@@ -219,7 +218,7 @@ class Road_Block extends Object {
 const SignalLight = objs.SignalLight =
     class SignalLight extends Object {
         constructor() {
-            super([0.8, -0.8],[1, 0.8],[0.25, -0.25]);
+            super([0.8, -0.8],[1.7, 0.8],[0.25, -0.25]);
 
             this.shape = new Shape_From_File("./assets/signal-light-block.obj");
             this.material = new Material(new defs.Phong_Shader(),

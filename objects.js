@@ -189,7 +189,7 @@ class Scout extends Object {
 const Road_Block = objs.Road_Block =
 class Road_Block extends Object {
     constructor() {
-        super([0.75, -0.75],[1.5, 0],[0.5, -0.5]);
+        super([0.75, -0.75],[1.25, 0],[0.5, -0.5]);
 
         this.shape = new Shape_From_File("./assets/road-block-new.obj");
         this.material = new Material(new defs.Phong_Shader(),
@@ -209,7 +209,7 @@ class Road_Block extends Object {
     draw(context, program_state, curr_dist, rail_ind) {
         let transform_road_block = Mat4.identity()
             .times(Mat4.translation(rail_ind * program_state.rail_width, 0.75, -curr_dist ))
-            .times(Mat4.scale(0.75, 0.75, 0.75))
+            .times(Mat4.scale(0.65, 0.65, 0.65))
         ;
         this.shape.draw(context, program_state, transform_road_block, this.material);
     }

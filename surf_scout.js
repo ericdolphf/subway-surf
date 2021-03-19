@@ -163,7 +163,7 @@ export class Surf_Scout_Base extends Scene
         this.recover = false; /* Needs Reset */
 
 
-        this.object_types = [new objs.SignalLight()];
+        this.object_types = [new objs.Road_Block(), new objs.SignalLight()];
         this.object_gen_rate = 0.8; // # objects per second
         this.object_count = 0; /* Needs Reset */
         this.min_difficulty = 7;
@@ -401,7 +401,7 @@ export class Surf_Scout extends Surf_Scout_Base
         // randomly generate objects
         let expect_frame_per_object = Math.floor(1/(dt * this.object_gen_rate));
         if (this.object_count < this.max_object_count && (Math.floor(Math.random() * expect_frame_per_object) % expect_frame_per_object === Math.floor(expect_frame_per_object / 2))) {
-            this.objects.push({ind: 0, curr_dist: this.scene_far, rail_ind: Math.floor(Math.random() * 3)-1});
+            this.objects.push({ind: Math.floor(Math.random() * Math.floor(this.object_types.length)), curr_dist: this.scene_far, rail_ind: Math.floor(Math.random() * 3)-1});
             this.object_count += 1;
         }
 

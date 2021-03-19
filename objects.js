@@ -189,9 +189,9 @@ class Scout extends Object {
 const Road_Block = objs.Road_Block =
 class Road_Block extends Object {
     constructor() {
-        super([0.5, -0.5],[0.5, 0],[0.5, -0.5]);
+        super([0.75, -0.75],[1.5, 0],[0.5, -0.5]);
 
-        this.shape = new Shape_From_File("./assets/teapot.obj");
+        this.shape = new Shape_From_File("./assets/road-block-new.obj");
         this.material = new Material(new defs.Phong_Shader(),
             {ambient: .4, diffusivity: .6, color: hex_color("#ff9900")}
         );
@@ -208,10 +208,39 @@ class Road_Block extends Object {
 
     draw(context, program_state, curr_dist, rail_ind) {
         let transform_road_block = Mat4.identity()
-            .times(Mat4.rotation(-Math.PI/2, 1,0,0))
-            .times(Mat4.translation(rail_ind * program_state.rail_width, curr_dist,0.25 ))
-            .times(Mat4.scale(0.25, 0.25, 0.25))
+            .times(Mat4.translation(rail_ind * program_state.rail_width, 0.75, -curr_dist ))
+            .times(Mat4.scale(0.75, 0.75, 0.75))
         ;
         this.shape.draw(context, program_state, transform_road_block, this.material);
     }
 }
+
+
+const SignalLight = objs.SignalLight =
+    class SignalLight extends Object {
+        constructor() {
+            super([0.8, -0.8],[1, 0.8],[0.25, -0.25]);
+
+            this.shape = new Shape_From_File("./assets/signal-light-block.obj");
+            this.material = new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ff9900")}
+            );
+        }
+
+        get_collision_transform(curr_dist, rail_ind, rail_width) {
+            return Mat4.translation(rail_ind * rail_width, 0, -curr_dist);
+        }
+
+        draw_outline(context, program_state, curr_dist, rail_ind, rail_width) {
+            let bound = this.get_bound(this.get_collision_transform(curr_dist, rail_ind, rail_width));
+            super.draw_outline(context, program_state, bound);
+        }
+
+        draw(context, program_state, curr_dist, rail_ind) {
+            let transform = Mat4.identity()
+                .times(Mat4.translation(rail_ind * program_state.rail_width + 0.8, 1.5, -curr_dist ))
+                .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
+                .times(Mat4.scale(0.75, 0.75, 0.75));
+            this.shape.draw(context, program_state, transform, this.material);
+        }
+    }

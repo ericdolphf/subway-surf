@@ -11,15 +11,16 @@ function mix(src, tar, rate) {
 }
 
 class Text_Line extends Shape
-{                           // **Text_Line** embeds text in the 3D world, using a crude texture
-                            // method.  This Shape is made of a horizontal arrangement of quads.
-                            // Each is textured over with images of ASCII characters, spelling
-                            // out a string.  Usage:  Instantiate the Shape with the desired
-                            // character line width.  Then assign it a single-line string by calling
-                            // set_string("your string") on it. Draw the shape on a material
-                            // with full ambient weight, and text.png assigned as its texture
-                            // file.  For multi-line strings, repeat this process and draw with
-                            // a different matrix.
+{
+    // **Text_Line** embeds text in the 3D world, using a crude texture
+    // method.  This Shape is made of a horizontal arrangement of quads.
+    // Each is textured over with images of ASCII characters, spelling
+    // out a string.  Usage:  Instantiate the Shape with the desired
+    // character line width.  Then assign it a single-line string by calling
+    // set_string("your string") on it. Draw the shape on a material
+    // with full ambient weight, and text.png assigned as its texture
+    // file.  For multi-line strings, repeat this process and draw with
+    // a different matrix.
     constructor( max_size )
     { super( "position", "normal", "texture_coord" );
         this.max_size = max_size;
@@ -102,14 +103,16 @@ class Tunnel {
 }
 
 export class Surf_Scout_Base extends Scene
-{                                          // **Transforms_Sandbox_Base** is a Scene that can be added to any display canvas.
-                                           // This particular scene is broken up into two pieces for easier understanding.
-                                           // The piece here is the base class, which sets up the machinery to draw a simple
-                                           // scene demonstrating a few concepts.  A subclass of it, Transforms_Sandbox,
-                                           // exposes only the display() method, which actually places and draws the shapes,
-                                           // isolating that code so it can be experimented with on its own.
+{
+    // **Transforms_Sandbox_Base** is a Scene that can be added to any display canvas.
+    // This particular scene is broken up into two pieces for easier understanding.
+    // The piece here is the base class, which sets up the machinery to draw a simple
+    // scene demonstrating a few concepts.  A subclass of it, Transforms_Sandbox,
+    // exposes only the display() method, which actually places and draws the shapes,
+    // isolating that code so it can be experimented with on its own.
     constructor()
-    {                  // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
+    {
+        // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
         this.flag_outline = true; // for debugging
@@ -160,7 +163,7 @@ export class Surf_Scout_Base extends Scene
         this.recover = false; /* Needs Reset */
 
 
-        this.object_types = [new objs.Road_Block()];
+        this.object_types = [new objs.SignalLight()];
         this.object_gen_rate = 0.8; // # objects per second
         this.object_count = 0; /* Needs Reset */
         this.min_difficulty = 7;
@@ -218,7 +221,8 @@ export class Surf_Scout_Base extends Scene
         };
     }
     make_control_panel()
-    {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
+    {
+        // make_control_panel(): Sets up a panel of interactive HTML elements, including
         // buttons with key bindings for affecting this scene, and live info readouts.
 
         let silver = '#949393';
@@ -271,7 +275,8 @@ export class Surf_Scout_Base extends Scene
         this.scout.curr_h = 0; /* Needs Reset */
     }
     display( context, program_state )
-    {                                                // display():  Called once per frame of animation.  We'll isolate out
+    {
+        // display():  Called once per frame of animation.  We'll isolate out
         // the code that actually draws things into Transforms_Sandbox, a
         // subclass of this Scene.  Here, the base class's display only does
         // some initial setup.
@@ -306,14 +311,16 @@ export class Surf_Scout_Base extends Scene
 
 
 export class Surf_Scout extends Surf_Scout_Base
-{                                                    // **Transforms_Sandbox** is a Scene object that can be added to any display canvas.
-                                                     // This particular scene is broken up into two pieces for easier understanding.
-                                                     // See the other piece, Transforms_Sandbox_Base, if you need to see the setup code.
-                                                     // The piece here exposes only the display() method, which actually places and draws
-                                                     // the shapes.  We isolate that code so it can be experimented with on its own.
-                                                     // This gives you a very small code sandbox for editing a simple scene, and for
-                                                     // experimenting with matrix transformations.
-    display( context, program_state ) {                                                // display():  Called once per frame of animation.  For each shape that you want to
+{
+    // **Transforms_Sandbox** is a Scene object that can be added to any display canvas.
+     // This particular scene is broken up into two pieces for easier understanding.
+     // See the other piece, Transforms_Sandbox_Base, if you need to see the setup code.
+     // The piece here exposes only the display() method, which actually places and draws
+     // the shapes.  We isolate that code so it can be experimented with on its own.
+     // This gives you a very small code sandbox for editing a simple scene, and for
+     // experimenting with matrix transformations.
+    display( context, program_state ) {
+        // display():  Called once per frame of animation.  For each shape that you want to
         // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
         // different matrix value to control where the shape appears.
 

@@ -227,8 +227,8 @@ const SignalLight = objs.SignalLight =
             super([0.8, -0.8],[2, 0.8],[0.25, -0.25]);
 
             this.shape = new Shape_From_File("./assets/signal-light-block.obj");
-            this.material = new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#ff9900")}
+            this.material = new Material(new txts.Texture_Block(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#aaaaaa"), specularity: .2, texture: new Texture('./assets/road-block.jpg',"NEAREST" )}
             );
         }
 
@@ -257,10 +257,10 @@ class Cabin extends Object {
         super([1, -1],[2, 0],[tunnel_length/5, -tunnel_length/5]);
 
         this.roof = this.up;
-        this.shape = new defs.Cube(); //new Shape_From_File("./assets/signal-light-block.obj");
-        this.material = new Material(new defs.Phong_Shader(),
+        this.shape = new Shape_From_File("./assets/cargo.obj");
+        this.material = new Material(new txts.Texture_Cabin(),
             {
-                ambient: .4, diffusivity: .3, color: hex_color("#aaaaaa"),
+                ambient: .4, diffusivity: .3, specularity: .1, color: hex_color("#aaaaaa"),
                 texture: new Texture("./assets/cabin.jpg", "NEAREST")
             }
         );
@@ -280,7 +280,7 @@ class Cabin extends Object {
             .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
             .times(Mat4.translation(0, (this.top+this.bottom)/2, 0))
             .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
-            .times(Mat4.scale((this.right-this.left)/2, (this.top-this.bottom)/2, (this.front-this.rear)/2));
+            .times(Mat4.scale(4.25, 4.25, 4.25));
         this.shape.draw(context, program_state, transform, this.material);
     }
 }

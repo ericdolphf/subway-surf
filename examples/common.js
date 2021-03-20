@@ -653,6 +653,7 @@ class Textured_Phong extends Phong_Shader
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return this.shared_glsl_code() + `
         varying vec2 f_tex_coord;
+        varying vec3 position_obj;
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         attribute vec2 texture_coord;
         
@@ -668,6 +669,7 @@ class Textured_Phong extends Phong_Shader
             vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
                                               // Turn the per-vertex texture coordinate into an interpolated variable.
             f_tex_coord = texture_coord;
+            position_obj = position;
           } ` ;
     }
   fragment_glsl_code()         // ********* FRAGMENT SHADER ********* 

@@ -1,4 +1,5 @@
 import {tiny, defs} from './examples/common.js';
+import {txts} from './textures.js'
 import {Shape_From_File} from "./examples/obj-file-demo.js";
 
 const { vec3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
@@ -191,8 +192,8 @@ class Road_Block extends Object {
         super([0.75, -0.75],[1, 0],[0.25, -0.25]);
 
         this.shape = new Shape_From_File("./assets/road-block-new.obj");
-        this.material = new Material(new defs.Phong_Shader(),
-            {ambient: .4, diffusivity: .6, color: hex_color("#ff9900")}
+        this.material = new Material(new txts.Texture_Block(),
+            {color: hex_color("#aaaaaa"), ambient: .4, diffusivity: .1, specularity: .2, texture: new Texture('./assets/road-block.jpg',"NEAREST" )}
         );
     }
 
@@ -243,10 +244,5 @@ const SignalLight = objs.SignalLight =
             this.shape.draw(context, program_state, transform, this.material);
         }
     }
-
-// const Carriage = objs.Carriage =
-// class Carriage extends Objects {
-//
-// }
 
 

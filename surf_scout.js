@@ -115,7 +115,7 @@ export class Surf_Scout_Base extends Scene
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
-        this.flag_outline = true; // for debugging
+        this.debug = true; // for debugging
 
         this.score = 0; /* Needs Reset */
         this.start = this.start_flag = 0;
@@ -132,7 +132,7 @@ export class Surf_Scout_Base extends Scene
         this.floor = 0; /* Needs Reset */
 
         this.t_jump = 0; /* Needs Reset */
-        this.h_lo = this.camera_pos[1] * 0.3;
+        this.h_lo = this.camera_pos[1] * 0.4;
         this.h_hi = this.camera_pos[1] * 0.6;
         this.g = 35;
         this.v_hi = Math.sqrt(2*this.g*this.h_hi);
@@ -141,7 +141,7 @@ export class Surf_Scout_Base extends Scene
         this.jump = false; /* Needs Reset */
         this.jump_kind = 0; // 0 for high jump, 1 for low jump;
 
-        this.v_scout_lo = 10;
+        this.v_scout_lo = 15;
         this.v_scout_hi = 1.5 * this.v_scout_lo;
 
         this.speedup = false; /* Needs Reset */
@@ -162,13 +162,18 @@ export class Surf_Scout_Base extends Scene
         this.down = false; /* Needs Reset */
         this.recover = false; /* Needs Reset */
 
+        this.max_lives = 3;
+        this.curr_lives = this.max_lives; /* Needs Reset */
+        this.immune = false; /* Needs Reset */
+        this.immune_flash_period = 0.5; // in seconds
+        this.immune_duration = 2; // in seconds
+        this.t_immune = 0; /* Needs Reset */
 
         this.object_types = [new objs.Road_Block(), new objs.SignalLight()];
-        this.object_gen_rate = 0.8; // # objects per second
         this.object_count = 0; /* Needs Reset */
-        this.min_difficulty = 7;
-        this.max_difficulty = 12;
-        this.max_object_count = Math.floor((this.min_difficulty + this.max_difficulty)/2); /* Needs Reset */
+        this.min_difficulty = 1;
+        this.max_difficulty = 9;
+        this.curr_difficulty = this.min_difficulty; /* Needs Reset */
         this.objects = []; /* Needs Reset */
 
         this.tunnel_width = 3*this.rail_width + 0.5;
@@ -177,7 +182,6 @@ export class Surf_Scout_Base extends Scene
         this.tunnel_length = this.scene_far-this.scene_near;
 
         this.rail_stretch = 3.5;
-
 
         this.scout = new objs.Scout();
         this.shapes = {
@@ -211,7 +215,7 @@ export class Surf_Scout_Base extends Scene
             tunnel: new Material(new txts.Texture_Tunnel(), {
                 color: hex_color("#000000"),
                 ambient: .6, diffusivity: 0.3, specularity: 0.1,
-                texture: new Texture("assets/tunnel4.jpg", "NEAREST") // texture source: https://nl.pinterest.com/pin/638807528370979541/
+                texture: new Texture("assets/tunnel.jpg", "NEAREST") // texture source: https://nl.pinterest.com/pin/638807528370979541/
             }),
             text_image: new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#ff7700"),
@@ -219,6 +223,12 @@ export class Surf_Scout_Base extends Scene
                 texture: new Texture("assets/text.png")
             })
         };
+    }
+    get_obj_gen_rate() {
+        return (this.curr_difficulty + 5) / (this.scene_far-this.scene_near) * this.v_scout_lo;
+    }
+    get_min_obj_dist() {
+        return (this.scene_far-this.scene_near) / (this.curr_difficulty + 5);
     }
     make_control_panel()
     {
@@ -236,20 +246,20 @@ export class Surf_Scout_Base extends Scene
         this.key_triggered_button( "Move Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
         this.key_triggered_button( "Lie Down", [ "k" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
         this.key_triggered_button( "Speed Up/Down", [ "\\" ], () => { if (!this.pause) this.speedup ^= true; }, silver);//, () => { if (!this.pause) this.speedup = false });
-        this.key_triggered_button( "Pause/Resume", [ "=" ], () => {
-            this.pause ^= true;
-        } ,silver);
+        this.key_triggered_button( "Pause/Resume", [ "-" ], () => { this.pause ^= true; } ,silver);
+        if (this.debug)
+            this.key_triggered_button( "(Debug) Refill Lives", [ "=" ], () => { this.curr_lives = this.max_lives; } ,silver);
         this.new_line();
         this.new_line();
         let color_easy = '#3ff13f';
         let color_hard = '#f17241';
-        this.key_triggered_button("- (at least " + this.min_difficulty.toString() + ")", ["["], () => { this.max_object_count = Math.max(this.max_object_count-1, this.min_difficulty); }, color_easy);
+        this.key_triggered_button("- (at least " + this.min_difficulty.toString() + ")", ["["], () => { this.curr_difficulty = Math.max(this.curr_difficulty-1, this.min_difficulty); }, color_easy);
         this.new_line();
         this.new_line();
-        this.live_string( box => { box.textContent = "Current Difficulty: " + this.max_object_count.toString() });
+        this.live_string( box => { box.textContent = "Current Difficulty: " + this.curr_difficulty.toString() });
         this.new_line();
         this.new_line();
-        this.key_triggered_button("+ (at most " + this.max_difficulty.toString() + ")", ["]"], () => { this.max_object_count = Math.min(this.max_object_count+1, this.max_difficulty); }, color_hard);
+        this.key_triggered_button("+ (at most " + this.max_difficulty.toString() + ")", ["]"], () => { this.curr_difficulty = Math.min(this.curr_difficulty+1, this.max_difficulty); }, color_hard);
     }
     reset() {
         this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
@@ -268,8 +278,12 @@ export class Surf_Scout_Base extends Scene
         this.down_start = false; /* Needs Reset */
         this.down = false; /* Needs Reset */
         this.recover = false; /* Needs Reset */
+        this.curr_lives = this.max_lives; /* Needs Reset */
+        this.immune = false; /* Needs Reset */
+        this.t_immune = 0; /* Needs Reset */
+
         this.object_count = 0; /* Needs Reset */
-        this.max_object_count = Math.floor((this.min_difficulty + this.max_difficulty)/2); /* Needs Reset */
+        this.curr_difficulty = this.min_difficulty; /* Needs Reset */
         this.objects = []; /* Needs Reset */
 
         this.scout.curr_x = 0; /* Needs Reset */
@@ -361,7 +375,7 @@ export class Surf_Scout extends Surf_Scout_Base
                 .times(Mat4.translation(0,0, -1.01))
             ;
 
-            let line = 'Scores Earned: ' + Math.floor(this.score).toString();
+            let line = 'Score Earned: ' + Math.floor(this.score).toString();
             let n_char = line.length;
             let scale_text = 0.04;
             let transform_line = transform_lines.times(Mat4.translation(- n_char * 1.5 * scale_text / 2, scale_text, 0));
@@ -384,7 +398,7 @@ export class Surf_Scout extends Surf_Scout_Base
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
         // get the value of this.v_scout
-        this.v_scout = mix(this.v_scout, this.speedup ? this.v_scout_hi : this.v_scout_lo, 0.3);
+        this.v_scout = mix(this.v_scout, this.speedup ? this.v_scout_hi : this.v_scout_lo, 0.2);
 
         if (this.pause) {
             this.v_scout = 0;
@@ -395,17 +409,28 @@ export class Surf_Scout extends Surf_Scout_Base
             this.omega_scout_sway = mix(this.omega_scout_sway, this.speedup ? this.omega_scout_sway_0 * this.v_scout_hi / this.v_scout_lo : this.omega_scout_sway_0, 0.1);
             this.v_switch = this.v_switch_0;
             program_state.curr_dist += dt * this.v_scout;
-            this.score += dt * this.v_scout * (1 + (this.max_object_count-this.min_difficulty)/(this.max_difficulty-this.min_difficulty));
+            this.score += dt * this.v_scout * (1 + (this.curr_difficulty-this.min_difficulty)/(this.max_difficulty-this.min_difficulty));
         }
 
         // set the variables in program_state to pass to the shader
         program_state.v_scout = this.v_scout;
 
         // randomly generate objects
-        let expect_frame_per_object = Math.floor(1/(dt * this.object_gen_rate));
-        if (this.object_count < this.max_object_count && (Math.floor(Math.random() * expect_frame_per_object) % expect_frame_per_object === Math.floor(expect_frame_per_object / 2))) {
-            this.objects.push({ind: Math.floor(Math.random() * Math.floor(this.object_types.length)), curr_dist: this.scene_far, rail_ind: Math.floor(Math.random() * 3)-1});
-            this.object_count += 1;
+        let expect_frame_per_object = Math.floor(1/(dt * this.get_obj_gen_rate()));
+        if ((Math.floor(Math.random() * expect_frame_per_object) % expect_frame_per_object === Math.floor(expect_frame_per_object / 2))) {
+            let curr_rail_ind = Math.floor(Math.random() * 3)-1;
+            let if_generate = true;
+            for (let j = 0; j < this.object_count; j++) {
+                if (this.objects[j].rail_ind === curr_rail_ind && this.objects[j].curr_dist > this.scene_far - this.get_min_obj_dist()) {
+                    // the newly generated object is too close to the previous object on this rail
+                    // in this case don't generate the object
+                    if_generate = false;
+                }
+            }
+            if (if_generate) {
+                this.objects.push({ind: Math.floor(Math.random() * Math.floor(this.object_types.length)), curr_dist: this.scene_far, rail_ind: curr_rail_ind});
+                this.object_count += 1;
+            }
         }
 
         // draw and process existing objects
@@ -413,13 +438,20 @@ export class Surf_Scout extends Surf_Scout_Base
             let obj_type = this.object_types[this.objects[i].ind];
             this.objects[i].curr_dist -= dt * this.v_scout;
             if (this.objects[i].curr_dist >= this.scene_near) {
-                if (this.scout.check_collision(obj_type, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width)) {
-                    this.start = 0;
-                    return;
+                if (!this.immune && this.scout.check_collision(obj_type, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width)) {
+                    this.curr_lives -= 1;
+                    if (this.curr_lives === 0) {
+                        // run out of lives!
+                        this.start = 0;
+                        return;
+                    } else {
+                        this.immune = true; // does it hurt? no worries!
+                        this.t_immune = t;
+                    }
                 }
                 obj_type.draw(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind);
 
-                if (this.flag_outline) obj_type.draw_outline(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width);
+                if (this.debug) obj_type.draw_outline(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width);
             } else {
                 // object goes out of the view, remove it from the object list
                 this.objects.splice(i, 1);
@@ -481,8 +513,19 @@ export class Surf_Scout extends Surf_Scout_Base
             this.scout.sway_phase = 0;
         }
 
-        this.scout.draw(context, program_state);
-        if (this.flag_outline) this.scout.draw_outline(context, program_state);
+        if (this.immune) {
+            if ((t - this.t_immune) >= this.immune_duration) {
+                // you've already enjoyed the immune time for long enough!
+                this.immune = false;
+                this.scout.draw(context, program_state);
+                if (this.debug) this.scout.draw_outline(context, program_state);
+            } else if ((t - this.t_immune) % this.immune_flash_period >= this.immune_flash_period/2) {
+                this.scout.draw(context, program_state);
+            }
+        } else {
+            this.scout.draw(context, program_state);
+            if (this.debug) this.scout.draw_outline(context, program_state);
+        }
 
         let transform_rail_basis = Mat4.translation(0,0, -this.scene_near)
             .times(Mat4.rotation(-Math.PI/2, 1,0,0))
@@ -507,13 +550,20 @@ export class Surf_Scout extends Surf_Scout_Base
             transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
         }
 
-        let line = "Current Difficulty: " + this.max_object_count.toString();
-        let transform_line = transform_lines.times(Mat4.translation(0,-scale_text * 2, 0));
+        let line = "Current Difficulty: " + this.curr_difficulty.toString();
         let color_easy = hex_color('#00FF00');
         let color_hard = hex_color('#FF5100');
-        let color_curr = color_easy.mix(color_hard, (this.max_object_count-this.min_difficulty)/(this.max_difficulty-this.min_difficulty));
+        let color_curr = color_easy.mix(color_hard, (this.curr_difficulty-this.min_difficulty)/(this.max_difficulty-this.min_difficulty));
         this.shapes.text.set_string(line, context.context);
         this.shapes.text.draw(context, program_state, transform_lines.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image.override(color_curr));
+
+        line = "Current Lives: " + this.curr_lives.toString();
+        let transform_line = program_state.camera_transform
+            .times(Mat4.translation(Math.tan(Math.PI/8) * context.width/context.height - scale_text * 1.5 * line.length, Math.tan(Math.PI/8) - scale_text, -1.01))
+        ;
+        color_curr = color_hard.mix(color_easy, (this.curr_lives-1) / (this.max_lives-1));
+        this.shapes.text.set_string(line, context.context);
+        this.shapes.text.draw(context, program_state, transform_line.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image.override(color_curr));
 
         // Note that our coordinate system stored in model_transform still has non-uniform scaling
         // due to our scale() call.  This could have undesired effects for subsequent transforms;

@@ -6,7 +6,9 @@ const { vec3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Text
 const objs = {};
 
 export {objs};
+export {intercept};
 
+const intercept =
 function intercept(range1, range2) {
     // range = [range_max, range_min]
     return (range2[0] <= range1[0] && range2[0] >= range1[1])
@@ -44,6 +46,8 @@ class Object {
         this.front = zrange[0];
         this.rear = zrange[1];
 
+        this.roof = -1; // modify in Cabin to indicate the change of floor in the scene
+
         this.angle_down = 0;
 
         this.grid = new Cube_Outline();
@@ -54,7 +58,7 @@ class Object {
         return Mat4.identity();
     }
 
-    get_stretch() {
+    get_stretch() { // identity if not a scout or this.angle_down === 0
         return Mat4.translation((this.left+this.right)/2, this.down + (this.up-this.down)/2 * Math.cos(this.angle_down), (this.front+this.rear)/2)
             .times(Mat4.scale(1,
                 Math.cos(this.angle_down) + (this.front-this.rear)/(this.up-this.down) * Math.sin(this.angle_down),
@@ -83,7 +87,7 @@ class Object {
 const Scout = objs.Scout =
 class Scout extends Object {
     constructor() {
-        super([0.5,-0.5],[1,0],[0.2,-0.2]);
+        super([0.35,-0.35],[1,0],[0.2,-0.2]);
 
         this.scale = 0.3;
 
@@ -130,10 +134,10 @@ class Scout extends Object {
         return Mat4.translation(this.curr_x, this.curr_h, 0);
     }
 
-    check_collision(obj_tar, curr_dist, rail_ind, rail_width) {
+    check_collision(obj_tar, curr_dist, rail_ind, rail_width, check_y = true) {
         let bound_src = this.get_bound(this.get_collision_transform());
         let bound_tar = obj_tar.get_bound(obj_tar.get_collision_transform(curr_dist, rail_ind, rail_width));
-        return intercept(bound_src[0], bound_tar[0]) && intercept(bound_src[1], bound_tar[1]) && intercept(bound_src[2], bound_tar[2]);
+        return intercept(bound_src[0], bound_tar[0]) && (!check_y || intercept(bound_src[1], bound_tar[1])) && intercept(bound_src[2], bound_tar[2]);
 
     }
 
@@ -198,7 +202,7 @@ class Road_Block extends Object {
     }
 
     get_collision_transform(curr_dist, rail_ind, rail_width) {
-        return Mat4.translation(rail_ind * rail_width, 0, -curr_dist);
+        return Mat4.translation(rail_ind * rail_width, 0, -curr_dist - (this.front - this.rear)/2);
     }
 
     draw_outline(context, program_state, curr_dist, rail_ind, rail_width) {
@@ -208,7 +212,8 @@ class Road_Block extends Object {
 
     draw(context, program_state, curr_dist, rail_ind) {
         let transform_road_block = Mat4.identity()
-            .times(Mat4.translation(rail_ind * program_state.rail_width, 0.25, -curr_dist ))
+            .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
+            .times(Mat4.translation(0, 0.25, 0))
             .times(Mat4.scale(0.65, 0.65, 0.65))
         ;
         this.shape.draw(context, program_state, transform_road_block, this.material);
@@ -228,7 +233,7 @@ const SignalLight = objs.SignalLight =
         }
 
         get_collision_transform(curr_dist, rail_ind, rail_width) {
-            return Mat4.translation(rail_ind * rail_width, 0, -curr_dist);
+            return Mat4.translation(rail_ind * rail_width, 0, -curr_dist - (this.front - this.rear)/2);
         }
 
         draw_outline(context, program_state, curr_dist, rail_ind, rail_width) {
@@ -238,7 +243,8 @@ const SignalLight = objs.SignalLight =
 
         draw(context, program_state, curr_dist, rail_ind) {
             let transform = Mat4.identity()
-                .times(Mat4.translation(rail_ind * program_state.rail_width + 0.8, 1.5, -curr_dist ))
+                .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
+                .times(Mat4.translation(0.8, 1.5, 0))
                 .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
                 .times(Mat4.scale(0.75, 0.75, 0.75));
             this.shape.draw(context, program_state, transform, this.material);
@@ -247,8 +253,35 @@ const SignalLight = objs.SignalLight =
 
 const Cabin = objs.Cabin =
 class Cabin extends Object {
-    constructor() {
-        super([[1,-1],[-1,-1],[-5,5]]);
+    constructor(tunnel_length) {
+        super([1, -1],[2, 0],[tunnel_length/5, -tunnel_length/5]);
+
+        this.roof = this.up;
+        this.shape = new defs.Cube(); //new Shape_From_File("./assets/signal-light-block.obj");
+        this.material = new Material(new defs.Phong_Shader(),
+            {
+                ambient: .4, diffusivity: .3, color: hex_color("#aaaaaa"),
+                texture: new Texture("./assets/cabin.jpg", "NEAREST")
+            }
+        );
+    }
+
+    get_collision_transform(curr_dist, rail_ind, rail_width) {
+        return Mat4.translation(rail_ind * rail_width, 0, -curr_dist - (this.front - this.rear)/2);
+    }
+
+    draw_outline(context, program_state, curr_dist, rail_ind, rail_width) {
+        let bound = this.get_bound(this.get_collision_transform(curr_dist, rail_ind, rail_width));
+        super.draw_outline(context, program_state, bound);
+    }
+
+    draw(context, program_state, curr_dist, rail_ind) {
+        let transform = Mat4.identity()
+            .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
+            .times(Mat4.translation(0, (this.top+this.bottom)/2, 0))
+            .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
+            .times(Mat4.scale((this.right-this.left)/2, (this.top-this.bottom)/2, (this.front-this.rear)/2));
+        this.shape.draw(context, program_state, transform, this.material);
     }
 }
 

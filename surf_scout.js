@@ -1,5 +1,5 @@
 import {tiny, defs} from './examples/common.js';
-import {objs} from './objects.js'
+import {objs, intercept} from './objects.js'
 import {txts} from './textures.js'
 
 // Pull these names into this module's scope for convenience:
@@ -121,7 +121,7 @@ export class Surf_Scout_Base extends Scene
         this.start = this.start_flag = 0;
 
         this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
-        this.camera_angle = Math.PI/6; // > PI/8 to limit the view
+        this.camera_angle = Math.PI/6 - Math.PI/48; // > PI/8 to limit the view
 
         this.scene_far = this.camera_pos[1] / Math.tan(this.camera_angle - Math.PI/8) - this.camera_pos[2];
         this.scene_far = Math.ceil(this.scene_far/10) * 10;
@@ -129,17 +129,13 @@ export class Surf_Scout_Base extends Scene
         this.scene_near = Math.floor(this.scene_near/10) * 10;
 
         this.rail_width = 2;
-        this.floor = 0; /* Needs Reset */
 
-        this.t_jump = 0; /* Needs Reset */
-        this.h_lo = this.camera_pos[1] * 0.4;
-        this.h_hi = this.camera_pos[1] * 0.6;
-        this.g = 35;
+        this.h_lo = 1.5; // this.camera_pos[1] * 0.3;
+        this.h_hi = 3.5; // this.camera_pos[1] * 0.6;
+        this.g = 40;
         this.v_hi = Math.sqrt(2*this.g*this.h_hi);
         this.v_lo = Math.sqrt(2*this.g*this.h_lo);
-        this.jump_start = false; /* Needs Reset */
-        this.jump = false; /* Needs Reset */
-        this.jump_kind = 0; // 0 for high jump, 1 for low jump;
+        this.v_scout_y = 0; /* Needs Reset */
 
         this.v_scout_lo = 15;
         this.v_scout_hi = 1.5 * this.v_scout_lo;
@@ -162,19 +158,12 @@ export class Surf_Scout_Base extends Scene
         this.down = false; /* Needs Reset */
         this.recover = false; /* Needs Reset */
 
-        this.max_lives = 3;
+        this.max_lives = 30;
         this.curr_lives = this.max_lives; /* Needs Reset */
         this.immune = false; /* Needs Reset */
         this.immune_flash_period = 0.5; // in seconds
         this.immune_duration = 2; // in seconds
         this.t_immune = 0; /* Needs Reset */
-
-        this.object_types = [new objs.Road_Block(), new objs.SignalLight()];
-        this.object_count = 0; /* Needs Reset */
-        this.min_difficulty = 1;
-        this.max_difficulty = 9;
-        this.curr_difficulty = this.min_difficulty; /* Needs Reset */
-        this.objects = []; /* Needs Reset */
 
         this.tunnel_width = 3*this.rail_width + 0.5;
         this.tunnel_height_side = this.camera_pos[1] - 1.5;
@@ -182,6 +171,13 @@ export class Surf_Scout_Base extends Scene
         this.tunnel_length = this.scene_far-this.scene_near;
 
         this.rail_stretch = 3.5;
+
+        this.object_types = [new objs.Road_Block(), new objs.SignalLight(), new objs.Cabin(this.tunnel_length)];
+        this.object_count = 0; /* Needs Reset */
+        this.min_difficulty = 1;
+        this.max_difficulty = 9;
+        this.curr_difficulty = this.min_difficulty; /* Needs Reset */
+        this.objects = []; /* Needs Reset */
 
         this.scout = new objs.Scout();
         this.shapes = {
@@ -230,6 +226,28 @@ export class Surf_Scout_Base extends Scene
     get_min_obj_dist() {
         return (this.scene_far-this.scene_near) / (this.curr_difficulty + 5);
     }
+    get_curr_rail() {
+        return Math.floor(this.scout.curr_x / this.rail_width + 1);
+    }
+    get_floor() {
+        for (let obj of this.objects) {
+            let obj_type = this.object_types[obj.ind];
+            let h = obj_type.roof; // h > 0 means a cabin
+            if (obj.if_hitzone && h > 0 && this.scout.check_collision(obj_type, obj.curr_dist, obj.rail_ind, this.rail_width, false)) {
+                if (!this.immune)
+                    return h + 0.01; // so that the cabin doesn't actually touches the scout, to prevent collision issues
+                else {
+                    if (this.scout.curr_h <= h + 0.01)
+                        return 0;
+                    else {
+                        this.immune = false;
+                        return h + 0.01;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
     make_control_panel()
     {
         // make_control_panel(): Sets up a panel of interactive HTML elements, including
@@ -240,8 +258,8 @@ export class Surf_Scout_Base extends Scene
         // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
         this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else if (!this.pause) this.start = 0;}, silver);
         this.new_line();
-        this.key_triggered_button( "High Jump", [ "8" ], () => { if (!this.jump && !this.down && !this.recover && !this.pause) {this.jump_start = true; this.jump_kind = 0; } } , silver);
-        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (!this.jump && !this.down && !this.recover && !this.pause) {this.jump_start = true; this.jump_kind = 1; } }, silver );
+        this.key_triggered_button( "High Jump", [ "8" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.scout.curr_h === 0 ? this.v_hi : this.v_lo; } } , silver);
+        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.v_lo; } }, silver );
         this.key_triggered_button( "Move Left", [ "j" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
         this.key_triggered_button( "Move Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
         this.key_triggered_button( "Lie Down", [ "k" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
@@ -264,12 +282,9 @@ export class Surf_Scout_Base extends Scene
     reset() {
         this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
         this.score = 0; /* Needs Reset */
-        this.floor = 0; /* Needs Reset */
-        this.t_jump = 0; /* Needs Reset */
-        this.jump_start = false; /* Needs Reset */
-        this.jump = false; /* Needs Reset */
         this.omega_scout_sway = this.omega_scout_sway_0; /* Needs Reset */
         this.v_scout = this.v_scout_lo; /* Needs Reset */
+        this.v_scout_y = 0; /* Needs Reset */
         this.speedup = false; /* Needs Reset */
         this.v_switch = this.v_switch_0; /* Needs Reset */
         this.pause = false; /* Needs Reset */
@@ -421,14 +436,15 @@ export class Surf_Scout extends Surf_Scout_Base
             let curr_rail_ind = Math.floor(Math.random() * 3)-1;
             let if_generate = true;
             for (let j = 0; j < this.object_count; j++) {
-                if (this.objects[j].rail_ind === curr_rail_ind && this.objects[j].curr_dist > this.scene_far - this.get_min_obj_dist()) {
+                let curr_obj = this.object_types[this.objects[j].ind];
+                if (this.objects[j].rail_ind === curr_rail_ind && this.objects[j].curr_dist + (curr_obj.front - curr_obj.rear)/2 > this.scene_far - this.get_min_obj_dist()) {
                     // the newly generated object is too close to the previous object on this rail
                     // in this case don't generate the object
                     if_generate = false;
                 }
             }
             if (if_generate) {
-                this.objects.push({ind: Math.floor(Math.random() * Math.floor(this.object_types.length)), curr_dist: this.scene_far, rail_ind: curr_rail_ind});
+                this.objects.push({ind: Math.floor(Math.random() * Math.floor(this.object_types.length)), curr_dist: this.scene_far, rail_ind: curr_rail_ind, if_hitzone: true});
                 this.object_count += 1;
             }
         }
@@ -437,8 +453,9 @@ export class Surf_Scout extends Surf_Scout_Base
         for (let i = 0; i < this.object_count; i++) {
             let obj_type = this.object_types[this.objects[i].ind];
             this.objects[i].curr_dist -= dt * this.v_scout;
-            if (this.objects[i].curr_dist >= this.scene_near) {
-                if (!this.immune && this.scout.check_collision(obj_type, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width)) {
+            if (this.objects[i].curr_dist >= this.scene_near - (obj_type.front - obj_type.rear)) {
+                if (!this.immune && this.objects[i].if_hitzone && this.scout.check_collision(obj_type, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width)) {
+                    this.objects[i].if_hitzone = false;
                     this.curr_lives -= 1;
                     if (this.curr_lives === 0) {
                         // run out of lives!
@@ -446,17 +463,28 @@ export class Surf_Scout extends Surf_Scout_Base
                         return;
                     } else {
                         this.immune = true; // does it hurt? no worries!
-                        this.t_immune = t;
+                        this.t_immune = 0;
                     }
                 }
                 obj_type.draw(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind);
 
-                if (this.debug) obj_type.draw_outline(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width);
+                if (this.debug && this.objects[i].if_hitzone) obj_type.draw_outline(context, program_state, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width);
             } else {
                 // object goes out of the view, remove it from the object list
                 this.objects.splice(i, 1);
                 this.object_count -= 1;
                 i--; // since the current element is removed, restore the index by one to not skip any element
+            }
+        }
+
+        // set the jump and fall movement:
+        let curr_floor = this.get_floor();
+        if (this.scout.curr_h > curr_floor || this.v_scout_y !== 0) {
+            this.scout.curr_h += this.v_scout_y * dt;
+            this.v_scout_y += -this.g * dt;
+            if (this.scout.curr_h <= curr_floor) {
+                this.scout.curr_h = curr_floor;
+                this.v_scout_y = 0;
             }
         }
 
@@ -478,24 +506,10 @@ export class Surf_Scout extends Surf_Scout_Base
             }
         }
 
-        // set the jump movement:
-        if (this.jump_start && !this.jump && !this.down) {
-            this.t_jump = t;
-            this.jump = true;
-            this.jump_start = false;
-        }
-        if (this.jump) {
-            this.scout.curr_h = this.floor + (this.jump_kind === 0 ? this.v_hi : this.v_lo) * (t-this.t_jump) - 1/2 * this.g * (t-this.t_jump)**2;
-            if (this.scout.curr_h <= this.floor && t !== this.t_jump) {
-                this.jump = false;
-                this.scout.curr_h = this.floor;
-            }
-        }
-
         // set the sway movement:
         this.scout.sway_phase += this.omega_scout_sway*dt;
         this.scout.sway_phase %= 2*Math.PI;
-        if (this.down_start && !this.jump) {
+        if (this.down_start && this.scout.curr_h === this.get_floor()) {
             this.down = true;
         }
         if (!this.down_start && this.down) {
@@ -514,14 +528,15 @@ export class Surf_Scout extends Surf_Scout_Base
         }
 
         if (this.immune) {
-            if ((t - this.t_immune) >= this.immune_duration) {
+            if (this.t_immune >= this.immune_duration) {
                 // you've already enjoyed the immune time for long enough!
                 this.immune = false;
                 this.scout.draw(context, program_state);
                 if (this.debug) this.scout.draw_outline(context, program_state);
-            } else if ((t - this.t_immune) % this.immune_flash_period >= this.immune_flash_period/2) {
+            } else if (this.t_immune % this.immune_flash_period >= this.immune_flash_period/2) {
                 this.scout.draw(context, program_state);
             }
+            if (!this.pause) this.t_immune += dt;
         } else {
             this.scout.draw(context, program_state);
             if (this.debug) this.scout.draw_outline(context, program_state);

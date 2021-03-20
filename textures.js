@@ -86,8 +86,6 @@ const Texture_Block = txts.Texture_Block =
         varying vec2 f_tex_coord;
         varying vec3 position_obj;
         uniform sampler2D texture;
-        uniform float curr_dist;
-        uniform float rail_width;
         
         void main(){
             // Sample the texture image in the correct place:
@@ -105,8 +103,6 @@ const Texture_Block = txts.Texture_Block =
 
         update_GPU(context, gpu_addresses, gpu_state, model_transform, material) {
             super.update_GPU(context, gpu_addresses, gpu_state, model_transform, material);
-            context.uniform1f(gpu_addresses.curr_dist, gpu_state.curr_dist);
-            context.uniform1f(gpu_addresses.rail_width, gpu_state.rail_width);
         }
     }
 

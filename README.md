@@ -1,4 +1,14 @@
-# tiny-graphics.js
+# Project Report
+
+## Team
+* Eric Fang 
+* Frost Zhang 305125593
+
+# Introduction
+
+# Advanced Features
+
+# References
 
 This is a small, single file JavaScript utility.  It organizes WebGL programs to be object-oriented and minimally cluttered.  
 

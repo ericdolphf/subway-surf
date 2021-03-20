@@ -169,7 +169,7 @@ export class Surf_Scout_Base extends Scene
         this.immune_duration = 2; // in seconds
         this.t_immune = 0; /* Needs Reset */
 
-        this.object_types = [new objs.Road_Block(), new objs.SignalLight()];
+        this.object_types = [new objs.Road_Block(), new objs.SignalLight(), new objs.Cabin()];
         this.object_count = 0; /* Needs Reset */
         this.min_difficulty = 1;
         this.max_difficulty = 9;

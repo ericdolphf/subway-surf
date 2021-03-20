@@ -222,8 +222,8 @@ const SignalLight = objs.SignalLight =
             super([0.8, -0.8],[2, 0.8],[0.25, -0.25]);
 
             this.shape = new Shape_From_File("./assets/signal-light-block.obj");
-            this.material = new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#ff9900")}
+            this.material = new Material(new txts.Texture_Block(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#aaaaaa"), specularity: .2, texture: new Texture('./assets/road-block.jpg',"NEAREST" )}
             );
         }
 
@@ -248,7 +248,29 @@ const SignalLight = objs.SignalLight =
 const Cabin = objs.Cabin =
 class Cabin extends Object {
     constructor() {
-        super([[1,-1],[-1,-1],[-5,5]]);
+        super([[5,-5],[-5,-5],[-20,20]]);
+
+        this.shape = new Shape_From_File("./assets/cargo.obj");
+        this.material = new Material(new txts.Texture_Cabin(),
+            {ambient: .3, diffusivity: .5, color: hex_color("#aaaaaa"), specularity: .1, texture: new Texture('./assets/cabin.jpg',"NEAREST" )}
+            );
+    }
+
+    get_collision_transform(curr_dist, rail_ind, rail_width) {
+        return Mat4.translation(rail_ind * rail_width, 0, -curr_dist);
+    }
+
+    draw_outline(context, program_state, curr_dist, rail_ind, rail_width) {
+        let bound = this.get_bound(this.get_collision_transform(curr_dist, rail_ind, rail_width));
+        super.draw_outline(context, program_state, bound);
+    }
+
+    draw(context, program_state, curr_dist, rail_ind) {
+        let transform = Mat4.identity()
+            .times(Mat4.translation(rail_ind * program_state.rail_width, 0, -curr_dist ))
+            .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
+            .times(Mat4.scale(4.25, 4.25, 4.25));
+        this.shape.draw(context, program_state, transform, this.material);
     }
 }
 

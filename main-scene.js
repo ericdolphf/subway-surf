@@ -29,7 +29,9 @@ import { Text_Demo }
 import { Transforms_Sandbox }
   from "./examples/transforms-sandbox.js"
 import { Surf_Scout }
-  from "./surf_scout.js";
+  from "./surf_scout.js"
+import { Test }
+  from "./test.js";
 
 Object.assign( defs,
                      { Axes_Viewer, Axes_Viewer_Test_Scene },
@@ -40,7 +42,8 @@ Object.assign( defs,
                      { Surfaces_Demo },
                      { Text_Demo },
                      { Transforms_Sandbox },
-                     { Surf_Scout }
+                     { Surf_Scout },
+                     { Test }
                      );
 
     // ******************** End extra step

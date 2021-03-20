@@ -245,4 +245,10 @@ const SignalLight = objs.SignalLight =
         }
     }
 
+const Cabin = objs.Cabin =
+class Cabin extends Object {
+    constructor() {
+        super([[1,-1],[-1,-1],[-5,5]]);
+    }
+}
 

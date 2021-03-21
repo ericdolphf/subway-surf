@@ -433,7 +433,7 @@ export class Surf_Scout extends Surf_Scout_Base
             this.shapes.text.draw(context, program_state, transform_line.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image.override(hex_color('#eeeeee')));
             transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
 
-            line = 'Press \'-\' to Restart!';
+            line = 'Press \'=\' to Restart!';
             scale_text = 0.02;
             transform_line = transform_lines.times(Mat4.translation(- line.length * 1.5 * scale_text / 2, scale_text, 0));
             this.shapes.text.set_string(line, context.context);

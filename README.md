@@ -87,3 +87,4 @@ position will be totally controlled by the gravity, until it lands on the floor 
 * Rail texture: <https://tekkitclassic.fandom.com/wiki/Track>;
 * Tunnel texture: <https://nl.pinterest.com/pin/638807528370979541/>;
 * Cabin texture: <http://www.i-tex.de/gallery.php?section=Synthetic&image=logcabin.jpg>. 
+* Some of our ideas for this project originated from the game Subway Surfers and Temple Run. 

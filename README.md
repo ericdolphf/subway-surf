@@ -25,8 +25,10 @@ in the tunnel. One can press ‘w’ for a low jump, ‘space’ for a high jump
 2. Different obstacles:
 
 In the surf the Scout will encounter different obstacles. For most of the obstacles, once the Scout bumps into any of 
-them, it will lose one life :(. Good news is that our Scout is tough enough that it has 3 lives at the beginning (Whoo)!
-Cherish it if you make the Scout bump into an object by accident and it still has more lives!
+them, it will lose one life :(. Good news is that our Scout is tough enough that it has 3 lives at the beginning (Whoo)! 
+Also, if the Scout still has remaining lives after bumping into one of the bad obstacles, it will start to flash and be 
+immune to any other collisions for 2 seconds! Cherish it if you make the Scout bump into an object by accident and it 
+still has more lives!
 
     a. Road_Block: The most basic obstacle. Our Scout can easily get it over just by a simple low jump.
     b. SignalLight: An obstacle that is higher, but hollow at the bottom. Our Scout can no longer overcome a SignalLight
@@ -57,7 +59,7 @@ Higher risk, larger gain!
     b. Restart: If you are bored with the current Scout in a run, you could press ‘Enter’ -- everything will end! And 
         just as when the game starts, you could press ‘Enter’ again to start playing with another brand new Scout! But 
         keep in mind: you can always switch to a new Scout, but you CANNOT constantly switch to a new 
-        boyfriend/girlfriend!! 
+        boyfriend/girlfriend!!
 
 # Advanced Features
 

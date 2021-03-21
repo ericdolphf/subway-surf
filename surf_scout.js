@@ -479,7 +479,7 @@ export class Surf_Scout extends Surf_Scout_Base
 
         // set the jump and fall movement:
         let curr_floor = this.get_floor();
-        if (this.scout.curr_h > curr_floor || this.v_scout_y !== 0) {
+        if (!this.pause && (this.scout.curr_h > curr_floor || this.v_scout_y !== 0)) {
             this.scout.curr_h += this.v_scout_y * dt;
             this.v_scout_y += -this.g * dt;
             if (this.scout.curr_h <= curr_floor) {

@@ -258,7 +258,7 @@ class Cabin extends Object {
 
         this.tunnel_length = tunnel_length;
         this.roof = this.up;
-        this.shape = new Shape_From_File("./assets/cabin.obj");
+        this.shape = new Shape_From_File("./assets/cabin.obj"); // http://www.i-tex.de/gallery.php?section=Synthetic&image=logcabin.jpg
         this.material = new Material(new txts.Texture_Cabin(),
             {
                 ambient: .4, diffusivity: .3, specularity: .1, color: hex_color("#aaaaaa"),
@@ -281,7 +281,7 @@ class Cabin extends Object {
             .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
             .times(Mat4.translation(0, 0.25, 0))
                 .times(Mat4.rotation(Math.PI/2, 0,1,0))
-            .times(Mat4.scale(15, 15, 15/*4.35 * this.tunnel_length/5*/))
+            .times(Mat4.scale(15, 15, 15))
             ;
         this.shape.draw(context, program_state, transform, this.material);
     }

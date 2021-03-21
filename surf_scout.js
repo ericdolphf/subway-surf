@@ -266,7 +266,7 @@ export class Surf_Scout_Base extends Scene
         this.key_triggered_button( "Move Right", [ "d" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
         this.key_triggered_button( "Lie Down", [ "s" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
         this.key_triggered_button( "Speed Up/Down", [ "Shift" ], () => { if (!this.pause) this.speedup ^= true; }, silver);// , () => { if (!this.pause) this.speedup = false });
-        this.key_triggered_button( "Pause/Resume", [ "-" ], () => { this.pause ^= true; } ,silver);
+        this.key_triggered_button( "Pause/Resume", [ "=" ], () => { this.pause ^= true; } ,silver);
         if (this.debug)
             this.key_triggered_button( "(Debug) Refill Lives", [ "=" ], () => { this.curr_lives = this.max_lives; } ,silver);
         this.new_line();

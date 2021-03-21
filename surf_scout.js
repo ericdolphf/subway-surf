@@ -260,7 +260,7 @@ export class Surf_Scout_Base extends Scene
         // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
         this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else if (!this.pause) this.start = 0;}, silver);
         this.new_line();
-        this.key_triggered_button( "High Jump", [ " " ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) { this.v_scout_y = this.scout.curr_h === 0 ? this.v_scout_y_hi : this.v_scout_y_lo; this.g =  this.g_hi; } } , silver);
+        this.key_triggered_button( "High Jump", [ " " ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) { this.v_scout_y = this.scout.curr_h === 0 ? this.v_scout_y_hi : this.v_scout_y_lo; this.g = this.scout.curr_h === 0 ? this.g_hi : this.g_lo; } } , silver);
         this.key_triggered_button( "Low Jump", [ "w" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) { this.v_scout_y = this.v_scout_y_lo; this.g =  this.g_lo; } }, silver );
         this.key_triggered_button( "Move Left", [ "a" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
         this.key_triggered_button( "Move Right", [ "d" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );

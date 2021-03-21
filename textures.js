@@ -122,6 +122,8 @@ const Texture_Cabin = txts.Texture_Cabin =
                     
                     vec2 f_tex_coord_new = f_tex_coord;
                     f_tex_coord_new.xy *= 7.0;
+                    
+                    vec3 pos = position_obj;
 
                     vec4 tex_color = texture2D( texture, f_tex_coord_new);
                     if( tex_color.w < .01 ) discard;

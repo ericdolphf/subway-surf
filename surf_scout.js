@@ -115,7 +115,7 @@ export class Surf_Scout_Base extends Scene
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
-        this.debug = true; // for debugging
+        this.debug = false; // for debugging
 
         this.score = 0; /* Needs Reset */
         this.start = this.start_flag = 0;
@@ -158,7 +158,7 @@ export class Surf_Scout_Base extends Scene
         this.down = false; /* Needs Reset */
         this.recover = false; /* Needs Reset */
 
-        this.max_lives = 30;
+        this.max_lives = this.debug ? 30 : 3;
         this.curr_lives = this.max_lives; /* Needs Reset */
         this.immune = false; /* Needs Reset */
         this.immune_flash_period = 0.5; // in seconds
@@ -172,7 +172,7 @@ export class Surf_Scout_Base extends Scene
 
         this.rail_stretch = 3.5;
 
-        this.object_types = [new objs.Road_Block(), new objs.SignalLight(), new objs.Cabin(this.tunnel_length)];
+        this.object_types = [new objs.Road_Block(), new objs.SignalLight(), new objs.Cabin(this.tunnel_length, this.rail_width)];
         this.object_count = 0; /* Needs Reset */
         this.min_difficulty = 1;
         this.max_difficulty = 9;
@@ -258,12 +258,12 @@ export class Surf_Scout_Base extends Scene
         // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
         this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else if (!this.pause) this.start = 0;}, silver);
         this.new_line();
-        this.key_triggered_button( "High Jump", [ "8" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.scout.curr_h === 0 ? this.v_hi : this.v_lo; } } , silver);
-        this.key_triggered_button( "Low Jump", [ "i" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.v_lo; } }, silver );
-        this.key_triggered_button( "Move Left", [ "j" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
-        this.key_triggered_button( "Move Right", [ "l" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
-        this.key_triggered_button( "Lie Down", [ "k" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
-        this.key_triggered_button( "Speed Up/Down", [ "\\" ], () => { if (!this.pause) this.speedup ^= true; }, silver);//, () => { if (!this.pause) this.speedup = false });
+        this.key_triggered_button( "High Jump", [ " " ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.scout.curr_h === 0 ? this.v_hi : this.v_lo; } } , silver);
+        this.key_triggered_button( "Low Jump", [ "w" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.v_lo; } }, silver );
+        this.key_triggered_button( "Move Left", [ "a" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
+        this.key_triggered_button( "Move Right", [ "d" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
+        this.key_triggered_button( "Lie Down", [ "s" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
+        this.key_triggered_button( "Speed Up/Down", [ "Shift" ], () => { if (!this.pause) this.speedup ^= true; }, silver);// , () => { if (!this.pause) this.speedup = false });
         this.key_triggered_button( "Pause/Resume", [ "-" ], () => { this.pause ^= true; } ,silver);
         if (this.debug)
             this.key_triggered_button( "(Debug) Refill Lives", [ "=" ], () => { this.curr_lives = this.max_lives; } ,silver);
@@ -456,6 +456,10 @@ export class Surf_Scout extends Surf_Scout_Base
             if (this.objects[i].curr_dist >= this.scene_near - (obj_type.front - obj_type.rear)) {
                 if (!this.immune && this.objects[i].if_hitzone && this.scout.check_collision(obj_type, this.objects[i].curr_dist, this.objects[i].rail_ind, this.rail_width)) {
                     this.objects[i].if_hitzone = false;
+                    if (obj_type.roof > 0) {
+                        this.start = 0;
+                        return;
+                    }
                     this.curr_lives -= 1;
                     if (this.curr_lives === 0) {
                         // run out of lives!

@@ -59,7 +59,7 @@ class Object {
     }
 
     get_stretch() { // identity if not a scout or this.angle_down === 0
-        return Mat4.translation((this.left+this.right)/2, this.down + (this.up-this.down)/2 * Math.cos(this.angle_down), (this.front+this.rear)/2)
+        return Mat4.translation((this.left+this.right)/2, this.down + (this.up-this.down)/2 * Math.cos(this.angle_down) + (this.front-this.rear)/2 * Math.sin(this.angle_down), (this.front+this.rear)/2)
             .times(Mat4.scale(1,
                 Math.cos(this.angle_down) + (this.front-this.rear)/(this.up-this.down) * Math.sin(this.angle_down),
                 Math.cos(this.angle_down) + (this.up-this.down)/(this.front-this.rear) * Math.sin(this.angle_down)))
@@ -244,20 +244,21 @@ const SignalLight = objs.SignalLight =
         draw(context, program_state, curr_dist, rail_ind) {
             let transform = Mat4.identity()
                 .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
-                .times(Mat4.translation(0.8, 1.5, 0))
+                .times(Mat4.translation(0.8, 2, 0))
                 .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
-                .times(Mat4.scale(0.75, 0.75, 0.75));
+                .times(Mat4.scale(0.75, 0.95, 0.75));
             this.shape.draw(context, program_state, transform, this.material);
         }
     }
 
 const Cabin = objs.Cabin =
 class Cabin extends Object {
-    constructor(tunnel_length) {
-        super([1, -1],[2, 0],[tunnel_length/5, -tunnel_length/5]);
+    constructor(tunnel_length, rail_width) {
+        super([0.8 * rail_width/2, -0.8 * rail_width/2],[1.9, 0.35],[tunnel_length/5.8, -tunnel_length/5.8]);
 
+        this.tunnel_length = tunnel_length;
         this.roof = this.up;
-        this.shape = new Shape_From_File("./assets/cargo.obj");
+        this.shape = new Shape_From_File("./assets/cabin.obj");
         this.material = new Material(new txts.Texture_Cabin(),
             {
                 ambient: .4, diffusivity: .3, specularity: .1, color: hex_color("#aaaaaa"),
@@ -278,9 +279,10 @@ class Cabin extends Object {
     draw(context, program_state, curr_dist, rail_ind) {
         let transform = Mat4.identity()
             .times(this.get_collision_transform(curr_dist, rail_ind, program_state.rail_width))
-            .times(Mat4.translation(0, (this.top+this.bottom)/2, 0))
-            .times(Mat4.rotation(-Math.PI/2, 0, 1, 0))
-            .times(Mat4.scale(4.25, 4.25, 4.25));
+            .times(Mat4.translation(0, 0.25, 0))
+                .times(Mat4.rotation(Math.PI/2, 0,1,0))
+            .times(Mat4.scale(15, 15, 15/*4.35 * this.tunnel_length/5*/))
+            ;
         this.shape.draw(context, program_state, transform, this.material);
     }
 }

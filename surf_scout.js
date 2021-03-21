@@ -131,10 +131,12 @@ export class Surf_Scout_Base extends Scene
         this.rail_width = 2;
 
         this.h_lo = 1.5; // this.camera_pos[1] * 0.3;
-        this.h_hi = 3.5; // this.camera_pos[1] * 0.6;
-        this.g = 40;
-        this.v_hi = Math.sqrt(2*this.g*this.h_hi);
-        this.v_lo = Math.sqrt(2*this.g*this.h_lo);
+        this.h_hi = 3; // this.camera_pos[1] * 0.6;
+        this.g_lo = 50;
+        this.g_hi = 30;
+        this.g = this.g_lo; /* Needs Reset */
+        this.v_scout_y_hi = Math.sqrt(2*this.g_hi*this.h_hi);
+        this.v_scout_y_lo = Math.sqrt(2*this.g_lo*this.h_lo);
         this.v_scout_y = 0; /* Needs Reset */
 
         this.v_scout_lo = 15;
@@ -258,8 +260,8 @@ export class Surf_Scout_Base extends Scene
         // this.live_string( box => { box.textContent = ( ( this.t % (2*Math.PI)).toFixed(2) + " radians" )} );
         this.key_triggered_button("Start Game", [ "Enter" ], () => { if (this.start === 0) this.start_flag = 1; else if (!this.pause) this.start = 0;}, silver);
         this.new_line();
-        this.key_triggered_button( "High Jump", [ " " ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.scout.curr_h === 0 ? this.v_hi : this.v_lo; } } , silver);
-        this.key_triggered_button( "Low Jump", [ "w" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) {this.v_scout_y = this.v_lo; } }, silver );
+        this.key_triggered_button( "High Jump", [ " " ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) { this.v_scout_y = this.scout.curr_h === 0 ? this.v_scout_y_hi : this.v_scout_y_lo; this.g =  this.g_hi; } } , silver);
+        this.key_triggered_button( "Low Jump", [ "w" ], () => { if (this.scout.curr_h <= this.get_floor() && !this.down && !this.recover && !this.pause) { this.v_scout_y = this.v_scout_y_lo; this.g =  this.g_lo; } }, silver );
         this.key_triggered_button( "Move Left", [ "a" ], () => { if (this.scout.curr_x > -this.rail_width && !this.pause) {this.switch_left = true; this.switch_right = false;} }, silver );
         this.key_triggered_button( "Move Right", [ "d" ], () => { if (this.scout.curr_x < this.rail_width && !this.pause) {this.switch_left = false; this.switch_right = true;} }, silver );
         this.key_triggered_button( "Lie Down", [ "s" ], () => { if (!this.pause) this.down_start = true; }, silver, () => { if (!this.pause) this.down_start = false; });
@@ -280,6 +282,7 @@ export class Surf_Scout_Base extends Scene
         this.key_triggered_button("+ (at most " + this.max_difficulty.toString() + ")", ["]"], () => { this.curr_difficulty = Math.min(this.curr_difficulty+1, this.max_difficulty); }, color_hard);
     }
     reset() {
+        this.g = this.g_lo; /* Needs Reset */
         this.camera_pos = vec3(0, 5, 6); /* Needs Reset */
         this.score = 0; /* Needs Reset */
         this.omega_scout_sway = this.omega_scout_sway_0; /* Needs Reset */
@@ -419,6 +422,23 @@ export class Surf_Scout extends Surf_Scout_Base
             this.v_scout = 0;
             this.omega_scout_sway = 0;
             this.v_switch = 0;
+
+            let transform_lines = program_state.camera_transform
+                .times(Mat4.translation(0,0, -1.01))
+            ;
+            let line = 'Pause';
+            let scale_text = 0.04;
+            let transform_line = transform_lines.times(Mat4.translation(- line.length * 1.5 * scale_text / 2, scale_text, 0));
+            this.shapes.text.set_string(line, context.context);
+            this.shapes.text.draw(context, program_state, transform_line.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image.override(hex_color('#eeeeee')));
+            transform_lines = transform_lines.times(Mat4.translation(0, -scale_text * 2, 0));
+
+            line = 'Press \'-\' to Restart!';
+            scale_text = 0.02;
+            transform_line = transform_lines.times(Mat4.translation(- line.length * 1.5 * scale_text / 2, scale_text, 0));
+            this.shapes.text.set_string(line, context.context);
+            this.shapes.text.draw(context, program_state, transform_line.times(Mat4.scale(scale_text,scale_text,scale_text)), this.materials.text_image.override(hex_color('#eeeeee')));
+
         } else {
             this.v_scout = mix(this.v_scout, this.speedup ? this.v_scout_hi : this.v_scout_lo, 0.1);
             this.omega_scout_sway = mix(this.omega_scout_sway, this.speedup ? this.omega_scout_sway_0 * this.v_scout_hi / this.v_scout_lo : this.omega_scout_sway_0, 0.1);
